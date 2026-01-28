@@ -10,4 +10,10 @@ dockerfile
 docker-compose.yml
 scripts/
 moon_calendars/
-data.json
+data/
+*.db
+*.db-wal
+*.db-shm
+tests/
+coverage/
+jest.config.js

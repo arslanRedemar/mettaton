@@ -10,6 +10,7 @@ services:
       - CLIENT_ID=${CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
       - GREETING_CHANEL_ID=${GREETING_CHANEL_ID}
+      - DB_PATH=/app/data/mettaton.db
     volumes:
-      - ./data.json:/app/data.json
+      - ./data:/app/data
       - ./moon_calendars:/app/moon_calendars

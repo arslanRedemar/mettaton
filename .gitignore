@@ -139,5 +139,8 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
 # Bot data
-data.json
+data/
+*.db
+*.db-wal
+*.db-shm
 moon_calendars/

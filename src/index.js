@@ -1,16 +1,29 @@
 const { REST, Routes } = require('discord.js');
 const path = require('path');
+const fs = require('fs');
 
 const config = require('./config');
 const client = require('./infrastructure/discord/client');
-const JsonDataRepository = require('./infrastructure/persistence/JsonDataRepository');
+const { initializeDatabase, closeDatabase } = require('./infrastructure/persistence/database');
+const SqliteRepository = require('./infrastructure/persistence/SqliteRepository');
 const MoonCalendarService = require('./infrastructure/services/MoonCalendarService');
 const SchedulerService = require('./application/services/SchedulerService');
 const commands = require('./interfaces/commands');
 const events = require('./interfaces/events');
 
+// Ensure data directory exists
+const dataDir = path.dirname(config.database.path);
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
+
+// Initialize database
+initializeDatabase(config.database.path);
+
 // Initialize dependencies
-const repository = new JsonDataRepository(config.dataFile);
+const repository = new SqliteRepository();
+repository.init();
+
 const moonCalendarService = new MoonCalendarService(path.join(__dirname, '..', config.calendarDir));
 
 // Register slash commands
@@ -48,8 +61,22 @@ function registerEvents() {
   }
 }
 
+// Graceful shutdown
+function setupGracefulShutdown() {
+  const shutdown = () => {
+    console.log('🛑 봇 종료 중...');
+    closeDatabase();
+    client.destroy();
+    process.exit(0);
+  };
+
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
+}
+
 // Start the bot
 async function start() {
+  setupGracefulShutdown();
   await registerCommands();
   registerEvents();
 
