@@ -25,6 +25,7 @@ const repository = new SqliteRepository();
 repository.init();
 
 const moonCalendarService = new MoonCalendarService(path.join(__dirname, '..', config.calendarDir));
+const schedulerService = new SchedulerService(client, repository);
 
 // Register slash commands
 async function registerCommands() {
@@ -48,7 +49,7 @@ function registerEvents() {
     } else {
       client.on(event.name, (...args) => {
         if (event.name === 'interactionCreate') {
-          event.execute(...args, repository);
+          event.execute(...args, repository, schedulerService);
         } else if (event.name === 'messageCreate') {
           event.execute(...args, { moonCalendarService });
         } else if (event.name === 'messageDelete') {
@@ -65,6 +66,7 @@ function registerEvents() {
 function setupGracefulShutdown() {
   const shutdown = () => {
     console.log('🛑 봇 종료 중...');
+    schedulerService.cancelSchedule();
     closeDatabase();
     client.destroy();
     process.exit(0);
@@ -81,8 +83,7 @@ async function start() {
   registerEvents();
 
   // Start scheduler
-  const schedulerService = new SchedulerService(client, repository);
-  schedulerService.startDailyMeeting();
+  schedulerService.start();
 
   await client.login(config.token);
 }

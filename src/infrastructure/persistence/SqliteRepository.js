@@ -86,6 +86,25 @@ class SqliteRepository {
       setSetting: this.db.prepare(`
         INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)
       `),
+
+      // Meeting Config
+      getMeetingConfig: this.db.prepare(`
+        SELECT * FROM meeting_config WHERE id = 1
+      `),
+      upsertMeetingConfig: this.db.prepare(`
+        INSERT INTO meeting_config (id, channel_id, schedule_hour, schedule_minute, meeting_start_time, meeting_end_time, location, activity, enabled)
+        VALUES (1, @channelId, @scheduleHour, @scheduleMinute, @meetingStartTime, @meetingEndTime, @location, @activity, @enabled)
+        ON CONFLICT(id) DO UPDATE SET
+          channel_id = @channelId,
+          schedule_hour = @scheduleHour,
+          schedule_minute = @scheduleMinute,
+          meeting_start_time = @meetingStartTime,
+          meeting_end_time = @meetingEndTime,
+          location = @location,
+          activity = @activity,
+          enabled = @enabled,
+          updated_at = CURRENT_TIMESTAMP
+      `),
     };
   }
 
@@ -251,6 +270,37 @@ class SqliteRepository {
     const newCount = current + 1;
     this.stmts.setSetting.run('meeting_count', String(newCount));
     return newCount;
+  }
+
+  // ==================== Meeting Config Operations ====================
+
+  getMeetingConfig() {
+    const row = this.stmts.getMeetingConfig.get();
+    if (!row) return null;
+    return {
+      channelId: row.channel_id,
+      scheduleHour: row.schedule_hour,
+      scheduleMinute: row.schedule_minute,
+      meetingStartTime: row.meeting_start_time,
+      meetingEndTime: row.meeting_end_time,
+      location: row.location,
+      activity: row.activity,
+      enabled: row.enabled === 1,
+    };
+  }
+
+  setMeetingConfig(config) {
+    this.stmts.upsertMeetingConfig.run({
+      channelId: config.channelId,
+      scheduleHour: config.scheduleHour,
+      scheduleMinute: config.scheduleMinute,
+      meetingStartTime: config.meetingStartTime,
+      meetingEndTime: config.meetingEndTime,
+      location: config.location,
+      activity: config.activity,
+      enabled: config.enabled ? 1 : 0,
+    });
+    return true;
   }
 }
 

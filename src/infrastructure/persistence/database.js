@@ -47,6 +47,19 @@ function initializeDatabase(dbPath) {
       value TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS meeting_config (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      channel_id TEXT NOT NULL,
+      schedule_hour INTEGER NOT NULL DEFAULT 20,
+      schedule_minute INTEGER NOT NULL DEFAULT 58,
+      meeting_start_time TEXT NOT NULL DEFAULT '23:00',
+      meeting_end_time TEXT NOT NULL DEFAULT '24:00',
+      location TEXT NOT NULL DEFAULT '음성 채널 수행방(온라인)',
+      activity TEXT NOT NULL DEFAULT '각자 수행 및 일지 작성',
+      enabled INTEGER NOT NULL DEFAULT 0,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     -- Initialize meeting count if not exists
     INSERT OR IGNORE INTO settings (key, value) VALUES ('meeting_count', '0');
   `);

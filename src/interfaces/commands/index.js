@@ -9,6 +9,8 @@ const questionDelete = require('./question/delete');
 const questionList = require('./question/list');
 const questionAnswer = require('./question/answer');
 
+const meetingConfig = require('./meeting/config');
+
 const commands = [
   lectureRegister,
   lectureDelete,
@@ -19,6 +21,7 @@ const commands = [
   questionDelete,
   questionList,
   questionAnswer,
+  meetingConfig,
 ];
 
 module.exports = commands;
