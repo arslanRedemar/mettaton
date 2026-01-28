@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  mettaton:
+    build: .
+    container_name: mettaton-bot
+    restart: unless-stopped
+    environment:
+      - TOKEN=${TOKEN}
+      - CLIENT_ID=${CLIENT_ID}
+      - GUILD_ID=${GUILD_ID}
+      - GREETING_CHANEL_ID=${GREETING_CHANEL_ID}
+    volumes:
+      - ./data.json:/app/data.json
+      - ./moon_calendars:/app/moon_calendars
