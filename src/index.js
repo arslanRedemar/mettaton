@@ -2,14 +2,20 @@ const { REST, Routes } = require('discord.js');
 const path = require('path');
 const fs = require('fs');
 
-const config = require('./config');
-const client = require('./infrastructure/discord/client');
-const { initializeDatabase, closeDatabase } = require('./infrastructure/persistence/database');
-const SqliteRepository = require('./infrastructure/persistence/SqliteRepository');
-const MoonCalendarService = require('./infrastructure/services/MoonCalendarService');
-const SchedulerService = require('./application/services/SchedulerService');
-const commands = require('./interfaces/commands');
-const events = require('./interfaces/events');
+// Core
+const config = require('../core/config');
+
+// Data Layer
+const client = require('./data/datasource/discordClient');
+const { initializeDatabase, closeDatabase } = require('./data/datasource/database');
+const { SqliteRepository } = require('./data/repositories');
+
+// Domain Layer - Usecases
+const { SchedulerService, MoonCalendarService } = require('./domain/usecases');
+
+// Presentation Layer
+const commands = require('./presentation/controllers');
+const events = require('./presentation/interfaces');
 
 // Ensure data directory exists
 const dataDir = path.dirname(config.database.path);
