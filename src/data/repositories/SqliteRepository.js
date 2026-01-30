@@ -89,6 +89,25 @@ class SqliteRepository {
         INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)
       `),
 
+      // Bot Strings
+      getAllStrings: this.db.prepare(`
+        SELECT key, value, params FROM bot_strings
+      `),
+      getString: this.db.prepare(`
+        SELECT value, params FROM bot_strings WHERE key = ?
+      `),
+      setString: this.db.prepare(`
+        INSERT INTO bot_strings (key, value, params, updated_at)
+        VALUES (@key, @value, @params, CURRENT_TIMESTAMP)
+        ON CONFLICT(key) DO UPDATE SET
+          value = @value,
+          params = @params,
+          updated_at = CURRENT_TIMESTAMP
+      `),
+      deleteString: this.db.prepare(`
+        DELETE FROM bot_strings WHERE key = ?
+      `),
+
       // Meeting Config
       getMeetingConfig: this.db.prepare(`
         SELECT * FROM meeting_config WHERE id = 1
@@ -223,6 +242,29 @@ class SqliteRepository {
     const newCount = current + 1;
     this.stmts.setSetting.run('meeting_count', String(newCount));
     return newCount;
+  }
+
+  // ==================== Bot String Operations ====================
+
+  getAllStrings() {
+    return this.stmts.getAllStrings.all();
+  }
+
+  getString(key) {
+    return this.stmts.getString.get(key) || null;
+  }
+
+  setString(key, value, params = null) {
+    this.stmts.setString.run({
+      key,
+      value,
+      params: params ? JSON.stringify(params) : null,
+    });
+  }
+
+  deleteString(key) {
+    const result = this.stmts.deleteString.run(key);
+    return result.changes > 0;
   }
 
   // ==================== Meeting Config Operations ====================

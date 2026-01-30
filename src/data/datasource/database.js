@@ -59,6 +59,13 @@ function initializeDatabase(dbPath) {
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS bot_strings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      params TEXT,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     -- Initialize meeting count if not exists
     INSERT OR IGNORE INTO settings (key, value) VALUES ('meeting_count', '0');
   `);

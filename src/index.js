@@ -4,6 +4,7 @@ const fs = require('fs');
 
 // Core
 const config = require('../core/config');
+const container = require('../core/di/container');
 
 // Data Layer
 const client = require('./data/datasource/discordClient');
@@ -11,7 +12,7 @@ const { initializeDatabase, closeDatabase } = require('./data/datasource/databas
 const { SqliteRepository } = require('./data/repositories');
 
 // Domain Layer - Usecases
-const { SchedulerService, MoonCalendarService } = require('./domain/usecases');
+const { SchedulerService, MoonCalendarService, StringService } = require('./domain/usecases');
 
 // Presentation Layer
 const commands = require('./presentation/controllers');
@@ -30,6 +31,10 @@ initializeDatabase(config.database.path);
 const repository = new SqliteRepository();
 repository.init();
 
+const stringService = new StringService(repository);
+stringService.loadFromDatabase();
+container.register('stringService', stringService);
+
 const moonCalendarService = new MoonCalendarService(path.join(__dirname, '..', config.calendarDir));
 const schedulerService = new SchedulerService(client, repository);
 
@@ -38,6 +43,11 @@ async function registerCommands() {
   const rest = new REST({ version: '10' }).setToken(config.token);
   try {
     console.log('⌛ 슬래시 명령어 등록 중...');
+
+    // Clear global commands (in case any were registered globally before)
+    await rest.put(Routes.applicationCommands(config.clientId), { body: [] });
+
+    // Register guild commands
     await rest.put(Routes.applicationGuildCommands(config.clientId, config.guildId), {
       body: commands.map((cmd) => cmd.data.toJSON()),
     });

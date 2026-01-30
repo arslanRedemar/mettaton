@@ -1,4 +1,5 @@
 const config = require('../../../core/config');
+const strings = require('./strings');
 
 module.exports = {
   name: 'guildMemberAdd',
@@ -6,6 +7,6 @@ module.exports = {
     const channel = member.guild.channels.cache.get(config.greetingChannelId);
     if (!channel) return;
 
-    channel.send(`🎉 환영합니다, <@${member.id}> 님! 서버에 오신 걸 환영해요!`);
+    channel.send(strings.guildMemberAdd.welcome(member.id));
   },
 };

@@ -1,4 +1,5 @@
 const config = require('../../../core/config');
+const strings = require('./strings');
 
 module.exports = {
   name: 'messageDelete',
@@ -8,14 +9,14 @@ module.exports = {
     if (message.channel.id === config.channels.question) {
       const deleted = repository.deleteQuestionByMessageId(message.id);
       if (deleted) {
-        console.log(`질문이 관리자에 의해 삭제됨.`);
+        console.log(strings.messageDelete.questionDeleted);
       }
     }
 
     if (message.channel.id === config.channels.schedule) {
       const deleted = repository.deleteLectureByMessageId(message.id);
       if (deleted) {
-        console.log(`강의가 관리자에 의해 삭제됨.`);
+        console.log(strings.messageDelete.lectureDeleted);
       }
     }
   },

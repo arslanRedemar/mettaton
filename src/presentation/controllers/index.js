@@ -10,6 +10,7 @@ const questionList = require('./question/list');
 const questionAnswer = require('./question/answer');
 
 const meetingConfig = require('./meeting/config');
+const stringConfig = require('./string/config');
 
 const commands = [
   lectureRegister,
@@ -22,6 +23,7 @@ const commands = [
   questionList,
   questionAnswer,
   meetingConfig,
+  stringConfig,
 ];
 
 module.exports = commands;
