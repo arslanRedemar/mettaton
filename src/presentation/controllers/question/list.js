@@ -8,6 +8,7 @@ module.exports = {
     const questions = repository.getAllQuestions();
 
     if (questions.length === 0) {
+      console.log(`[question/list] No questions found, requested by ${interaction.user.tag}`);
       return interaction.reply(strings.question.listEmpty);
     }
 
@@ -24,6 +25,7 @@ module.exports = {
       });
     });
 
+    console.log(`[question/list] Listed ${questions.length} question(s), requested by ${interaction.user.tag}`);
     await interaction.reply({ embeds: [embed] });
   },
 };

@@ -36,6 +36,7 @@ module.exports = {
     if (!timeRegex.test(end)) errors.push(strings.schedule.invalidEndTime);
 
     if (errors.length > 0) {
+      console.log(`[schedule/register] Validation failed by ${interaction.user.tag}: ${errors.join(', ')}`);
       return interaction.reply({
         content: strings.schedule.registerFail + errors.map((e) => `- ${e}`).join('\n'),
         ephemeral: true,
@@ -61,8 +62,11 @@ module.exports = {
       await msg.react('❌');
       lecture.messageId = msg.id;
       repository.updateLecture(lecture);
+    } else {
+      console.error(`[schedule/register] Schedule channel not found (ID: ${config.channels.schedule})`);
     }
 
+    console.log(`[schedule/register] Schedule #${lecture.id} "${title}" registered by ${interaction.user.tag}`);
     await interaction.reply({ content: strings.schedule.registerSuccess, ephemeral: true });
   },
 };

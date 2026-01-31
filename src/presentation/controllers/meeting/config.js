@@ -71,6 +71,7 @@ module.exports = {
       // Validate time format
       const timeRegex = /^([01]?\d|2[0-3]):([0-5]\d)$/;
       if (!timeRegex.test(meetingStartTime) || !timeRegex.test(meetingEndTime)) {
+        console.log(`[meeting/config] Invalid time format by ${interaction.user.tag}: start=${meetingStartTime}, end=${meetingEndTime}`);
         return interaction.reply({
           content: strings.meeting.invalidTimeFormat,
           ephemeral: true,
@@ -99,6 +100,7 @@ module.exports = {
       const scheduleTime = `${String(scheduleHour).padStart(2, '0')}:${String(scheduleMinute).padStart(2, '0')}`;
       const status = enabled ? strings.meeting.statusEnabled : strings.meeting.statusDisabled;
 
+      console.log(`[meeting/config] Meeting config saved by ${interaction.user.tag}: channel=${channel.id}, time=${scheduleTime}, ${meetingStartTime}~${meetingEndTime}`);
       await interaction.reply({
         content: strings.meeting.configSaved(channel.id, scheduleTime, meetingStartTime, meetingEndTime, location, activity, status),
         ephemeral: true,
@@ -106,6 +108,7 @@ module.exports = {
     } else if (subcommand === '활성화') {
       const config = repository.getMeetingConfig();
       if (!config) {
+        console.log(`[meeting/config] Enable failed - no config exists, requested by ${interaction.user.tag}`);
         return interaction.reply({
           content: strings.meeting.noConfig,
           ephemeral: true,
@@ -118,6 +121,7 @@ module.exports = {
         schedulerService.reschedule();
       }
 
+      console.log(`[meeting/config] Meeting enabled by ${interaction.user.tag}`);
       await interaction.reply({
         content: strings.meeting.enableSuccess,
         ephemeral: true,
@@ -125,6 +129,7 @@ module.exports = {
     } else if (subcommand === '비활성화') {
       const config = repository.getMeetingConfig();
       if (!config) {
+        console.log(`[meeting/config] Disable failed - no config exists, requested by ${interaction.user.tag}`);
         return interaction.reply({
           content: strings.meeting.noConfigExists,
           ephemeral: true,
@@ -137,6 +142,7 @@ module.exports = {
         schedulerService.cancelSchedule();
       }
 
+      console.log(`[meeting/config] Meeting disabled by ${interaction.user.tag}`);
       await interaction.reply({
         content: strings.meeting.disableSuccess,
         ephemeral: true,
@@ -144,6 +150,7 @@ module.exports = {
     } else if (subcommand === '확인') {
       const config = repository.getMeetingConfig();
       if (!config) {
+        console.log(`[meeting/config] View failed - no config exists, requested by ${interaction.user.tag}`);
         return interaction.reply({
           content: strings.meeting.noConfigView,
           ephemeral: true,
@@ -153,6 +160,7 @@ module.exports = {
       const scheduleTime = `${String(config.scheduleHour).padStart(2, '0')}:${String(config.scheduleMinute).padStart(2, '0')}`;
       const status = config.enabled ? strings.meeting.statusEnabled : strings.meeting.statusDisabled;
 
+      console.log(`[meeting/config] Config viewed by ${interaction.user.tag}`);
       await interaction.reply({
         content: strings.meeting.configDisplay(config.channelId, scheduleTime, config.meetingStartTime, config.meetingEndTime, config.location, config.activity, status),
         ephemeral: true,

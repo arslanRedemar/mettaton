@@ -31,8 +31,11 @@ module.exports = {
       });
       question.messageId = msg.id;
       repository.updateQuestion(question);
+    } else {
+      console.error(`[question/register] Question channel not found (ID: ${config.channels.question})`);
     }
 
+    console.log(`[question/register] Question #${question.id} registered by ${interaction.user.tag} (${interaction.user.id})`);
     await interaction.reply(strings.question.registerSuccess);
   },
 };

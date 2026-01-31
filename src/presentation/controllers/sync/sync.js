@@ -11,6 +11,8 @@ module.exports = {
   async execute(interaction, repository) {
     await interaction.deferReply({ ephemeral: true });
 
+    console.log(`[sync] Sync started by ${interaction.user.tag}`);
+
     try {
       const { guild } = interaction;
       await guild.members.fetch();
@@ -85,6 +87,7 @@ module.exports = {
         }
       }
 
+      console.log(`[sync] Sync completed by ${interaction.user.tag}: added=${results.membersAdded}, removed=${results.membersRemoved}, attendees=${results.attendeesRemoved}, lectures=${results.lectureMessagesCleaned}, questions=${results.questionMessagesCleaned}`);
       await interaction.editReply({
         content: strings.sync.complete(
           results.membersAdded,
@@ -95,7 +98,7 @@ module.exports = {
         ),
       });
     } catch (error) {
-      console.error('Sync error:', error);
+      console.error(`[sync] Sync failed for ${interaction.user.tag}:`, error);
       await interaction.editReply({
         content: strings.sync.error(error.message),
       });

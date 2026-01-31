@@ -6,8 +6,9 @@ module.exports = {
     .setName('포인트')
     .setDescription('내 활동 포인트 확인'),
 
-  async execute(interaction, repository, pointAccumulationService) {
+  async execute(interaction, _repository, _schedulerService, pointAccumulationService) {
     if (!pointAccumulationService) {
+      console.error('[point/myPoints] Point system unavailable');
       return interaction.reply({
         content: '❌ 포인트 시스템을 사용할 수 없습니다.',
         ephemeral: true,
@@ -21,6 +22,7 @@ module.exports = {
       ? strings.point.myPoints(points)
       : strings.point.noPoints;
 
+    console.log(`[point/myPoints] User ${interaction.user.tag} (${userId}) queried points: ${points}`);
     await interaction.reply({
       content: message,
       ephemeral: true,

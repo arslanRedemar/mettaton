@@ -13,6 +13,7 @@ module.exports = {
     const question = repository.deleteQuestion(questionId);
 
     if (!question) {
+      console.log(`[question/delete] Question #${questionId} not found, requested by ${interaction.user.tag}`);
       return interaction.reply({ content: strings.question.deleteNotFound(questionId), ephemeral: true });
     }
 
@@ -22,10 +23,11 @@ module.exports = {
         const msg = await channel.messages.fetch(question.messageId);
         if (msg) await msg.delete();
       } catch (err) {
-        console.log(strings.question.deleteMessageFail, err);
+        console.error(`[question/delete] Failed to delete Discord message for question #${questionId}:`, err);
       }
     }
 
+    console.log(`[question/delete] Question #${questionId} deleted by ${interaction.user.tag}`);
     await interaction.reply({ content: strings.question.deleteSuccess(question.id), ephemeral: true });
   },
 };

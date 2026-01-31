@@ -10,21 +10,25 @@ module.exports = {
     if (repository && message.guild) {
       try {
         repository.updateMemberActivity(message.author.id);
-      } catch {
-        // Ignore activity tracking errors
+      } catch (error) {
+        console.error(`[messageCreate] Activity tracking failed for ${message.author.tag} (${message.author.id}):`, error);
       }
     }
 
     // Point accumulation (automatic, no notification)
     if (pointAccumulationService && message.guild) {
       try {
-        pointAccumulationService.tryAccumulate(message.author.id);
-      } catch {
-        // Ignore point accumulation errors
+        const result = pointAccumulationService.tryAccumulate(message.author.id);
+        if (result) {
+          console.log(`[messageCreate] Points accumulated for ${message.author.tag} (${message.author.id}): +${result.pointsAdded} -> ${result.newPoints}`);
+        }
+      } catch (error) {
+        console.error(`[messageCreate] Point accumulation failed for ${message.author.tag} (${message.author.id}):`, error);
       }
     }
 
     if (message.content === strings.messageCreate.moonCommand) {
+      console.log(`[messageCreate] Moon calendar requested by ${message.author.tag} (${message.author.id})`);
       const msg = await message.channel.send(strings.messageCreate.moonLoading);
       try {
         const imageBuffer = await moonCalendarService.getCalendarImage();
@@ -41,8 +45,9 @@ module.exports = {
           embeds: [embed],
           files: [{ attachment: imageBuffer, name: 'moon_calendar.png' }],
         });
+        console.log(`[messageCreate] Moon calendar sent successfully for ${message.author.tag}`);
       } catch (err) {
-        console.error(strings.messageCreate.moonErrorLog, err);
+        console.error(`[messageCreate] Moon calendar failed for ${message.author.tag}:`, err);
         await msg.edit(strings.messageCreate.moonError);
       }
     }

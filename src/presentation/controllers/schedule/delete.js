@@ -14,6 +14,7 @@ module.exports = {
     const lecture = repository.deleteLecture(lectureId);
 
     if (!lecture) {
+      console.log(`[schedule/delete] Schedule #${lectureId} not found, requested by ${interaction.user.tag}`);
       return interaction.reply({ content: strings.schedule.deleteNotFound(lectureId), ephemeral: true });
     }
 
@@ -23,10 +24,11 @@ module.exports = {
         const msg = await channel.messages.fetch(lecture.messageId);
         if (msg) await msg.delete();
       } catch (err) {
-        console.log(strings.schedule.deleteMessageFail, err);
+        console.error(`[schedule/delete] Failed to delete Discord message for schedule #${lectureId}:`, err);
       }
     }
 
+    console.log(`[schedule/delete] Schedule #${lectureId} "${lecture.title}" deleted by ${interaction.user.tag}`);
     await interaction.reply({ content: strings.schedule.deleteSuccess(lecture.title), ephemeral: true });
   },
 };

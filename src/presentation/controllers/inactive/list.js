@@ -38,6 +38,7 @@ module.exports = {
     }
 
     if (inactiveMembers.length === 0) {
+      console.log(`[inactive/list] No inactive members found (threshold: ${days} days), requested by ${interaction.user.tag}`);
       return interaction.reply({ content: strings.inactive.listEmpty, ephemeral: true });
     }
 
@@ -54,6 +55,7 @@ module.exports = {
       return interaction.reply({ content: truncated, ephemeral: true });
     }
 
+    console.log(`[inactive/list] Found ${inactiveMembers.length} inactive member(s) (threshold: ${days} days), requested by ${interaction.user.tag}`);
     await interaction.reply({ content, ephemeral: true });
   },
 };

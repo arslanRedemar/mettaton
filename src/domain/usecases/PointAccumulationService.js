@@ -18,33 +18,33 @@ class PointAccumulationService {
    * @returns {Object|null} - {accumulated: boolean, newPoints: number, message: string} or null if cooldown active
    */
   tryAccumulate(userId) {
-    // Get point configuration
-    const config = this.repository.getPointConfig();
-    const pointsPerAction = config?.pointsPerAction || 100;
-    const cooldownMinutes = config?.cooldownMinutes || 5;
+    try {
+      const config = this.repository.getPointConfig();
+      const pointsPerAction = config?.pointsPerAction || 100;
+      const cooldownMinutes = config?.cooldownMinutes || 5;
 
-    // Get user's current points
-    let activityPoint = this.repository.getActivityPoint(userId);
+      let activityPoint = this.repository.getActivityPoint(userId);
 
-    // If user doesn't exist, create new record
-    if (!activityPoint) {
-      activityPoint = new ActivityPoint({ userId, points: 0 });
+      if (!activityPoint) {
+        activityPoint = new ActivityPoint({ userId, points: 0 });
+      }
+
+      if (!activityPoint.canAccumulate(cooldownMinutes)) {
+        return null;
+      }
+
+      activityPoint.addPoints(pointsPerAction);
+      this.repository.upsertActivityPoint(activityPoint);
+
+      return {
+        accumulated: true,
+        newPoints: activityPoint.points,
+        pointsAdded: pointsPerAction,
+      };
+    } catch (error) {
+      console.error(`[PointService] tryAccumulate failed for user ${userId}:`, error);
+      throw error;
     }
-
-    // Check cooldown
-    if (!activityPoint.canAccumulate(cooldownMinutes)) {
-      return null; // Cooldown active, don't accumulate
-    }
-
-    // Add points and update
-    activityPoint.addPoints(pointsPerAction);
-    this.repository.upsertActivityPoint(activityPoint);
-
-    return {
-      accumulated: true,
-      newPoints: activityPoint.points,
-      pointsAdded: pointsPerAction,
-    };
   }
 
   /**
@@ -74,16 +74,22 @@ class PointAccumulationService {
    * @returns {number} - New total points
    */
   adjustPoints(userId, amount) {
-    let activityPoint = this.repository.getActivityPoint(userId);
+    try {
+      let activityPoint = this.repository.getActivityPoint(userId);
 
-    if (!activityPoint) {
-      activityPoint = new ActivityPoint({ userId, points: 0 });
+      if (!activityPoint) {
+        activityPoint = new ActivityPoint({ userId, points: 0 });
+      }
+
+      activityPoint.addPoints(amount);
+      this.repository.upsertActivityPoint(activityPoint);
+
+      console.log(`[PointService] Points adjusted for user ${userId}: ${amount > 0 ? '+' : ''}${amount} -> ${activityPoint.points}`);
+      return activityPoint.points;
+    } catch (error) {
+      console.error(`[PointService] adjustPoints failed for user ${userId} (amount: ${amount}):`, error);
+      throw error;
     }
-
-    activityPoint.addPoints(amount);
-    this.repository.upsertActivityPoint(activityPoint);
-
-    return activityPoint.points;
   }
 
   /**
@@ -93,16 +99,22 @@ class PointAccumulationService {
    * @returns {number} - New total points
    */
   setPoints(userId, points) {
-    let activityPoint = this.repository.getActivityPoint(userId);
+    try {
+      let activityPoint = this.repository.getActivityPoint(userId);
 
-    if (!activityPoint) {
-      activityPoint = new ActivityPoint({ userId });
+      if (!activityPoint) {
+        activityPoint = new ActivityPoint({ userId });
+      }
+
+      activityPoint.setPoints(points);
+      this.repository.upsertActivityPoint(activityPoint);
+
+      console.log(`[PointService] Points set for user ${userId}: ${activityPoint.points}`);
+      return activityPoint.points;
+    } catch (error) {
+      console.error(`[PointService] setPoints failed for user ${userId} (points: ${points}):`, error);
+      throw error;
     }
-
-    activityPoint.setPoints(points);
-    this.repository.upsertActivityPoint(activityPoint);
-
-    return activityPoint.points;
   }
 
   /**
@@ -111,7 +123,14 @@ class PointAccumulationService {
    * @returns {boolean} - Success status
    */
   resetUserPoints(userId) {
-    return this.repository.resetUserPoints(userId);
+    try {
+      const result = this.repository.resetUserPoints(userId);
+      console.log(`[PointService] Points reset for user ${userId}`);
+      return result;
+    } catch (error) {
+      console.error(`[PointService] resetUserPoints failed for user ${userId}:`, error);
+      throw error;
+    }
   }
 
   /**
@@ -119,7 +138,14 @@ class PointAccumulationService {
    * @returns {boolean} - Success status
    */
   resetAllPoints() {
-    return this.repository.resetAllPoints();
+    try {
+      const result = this.repository.resetAllPoints();
+      console.log('[PointService] All user points reset');
+      return result;
+    } catch (error) {
+      console.error('[PointService] resetAllPoints failed:', error);
+      throw error;
+    }
   }
 
   /**
@@ -138,7 +164,14 @@ class PointAccumulationService {
    * @returns {boolean} - Success status
    */
   setConfig(pointsPerAction, cooldownMinutes) {
-    return this.repository.setPointConfig(pointsPerAction, cooldownMinutes);
+    try {
+      const result = this.repository.setPointConfig(pointsPerAction, cooldownMinutes);
+      console.log(`[PointService] Config updated: pointsPerAction=${pointsPerAction}, cooldownMinutes=${cooldownMinutes}`);
+      return result;
+    } catch (error) {
+      console.error(`[PointService] setConfig failed (pointsPerAction: ${pointsPerAction}, cooldownMinutes: ${cooldownMinutes}):`, error);
+      throw error;
+    }
   }
 }
 

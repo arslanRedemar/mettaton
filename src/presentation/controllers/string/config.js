@@ -68,6 +68,7 @@ module.exports = {
       }
 
       if (entries.length === 0) {
+        console.log(`[string/config] No strings found for category "${category || 'all'}", requested by ${interaction.user.tag}`);
         return interaction.reply({ content: '등록된 문자열이 없습니다.', ephemeral: true });
       }
 
@@ -89,6 +90,7 @@ module.exports = {
         embed.addFields({ name: cat, value: lines.join('\n') });
       }
 
+      console.log(`[string/config] String list viewed (${entries.length} entries), requested by ${interaction.user.tag}`);
       await interaction.reply({ embeds: [embed], ephemeral: true });
     } else if (subcommand === '수정') {
       const key = interaction.options.getString('키');
@@ -96,12 +98,14 @@ module.exports = {
       const def = stringService.getDefault(key);
 
       if (!def) {
+        console.log(`[string/config] Unknown key "${key}" for modify, requested by ${interaction.user.tag}`);
         return interaction.reply({ content: `알 수 없는 문자열 키: \`${key}\``, ephemeral: true });
       }
 
       if (def.params) {
         const missing = def.params.filter((p) => !value.includes(`{${p}}`));
         if (missing.length > 0) {
+          console.log(`[string/config] Missing template params for "${key}": ${missing.join(', ')}, by ${interaction.user.tag}`);
           return interaction.reply({
             content:
               `템플릿 변수가 누락되었습니다: ${missing.map((p) => `\`{${p}}\``).join(', ')}\n` +
@@ -113,6 +117,7 @@ module.exports = {
 
       stringService.setString(key, value);
 
+      console.log(`[string/config] String "${key}" modified by ${interaction.user.tag}`);
       await interaction.reply({
         content: `문자열이 수정되었습니다.\n\n키: \`${key}\`\n이전: ${def.value}\n변경: ${value}`,
         ephemeral: true,
@@ -122,11 +127,13 @@ module.exports = {
       const def = stringService.getDefault(key);
 
       if (!def) {
+        console.log(`[string/config] Unknown key "${key}" for reset, requested by ${interaction.user.tag}`);
         return interaction.reply({ content: `알 수 없는 문자열 키: \`${key}\``, ephemeral: true });
       }
 
       stringService.resetString(key);
 
+      console.log(`[string/config] String "${key}" reset to default by ${interaction.user.tag}`);
       await interaction.reply({
         content: `\`${key}\` 문자열이 기본값으로 초기화되었습니다.\n기본값: ${def.value}`,
         ephemeral: true,
@@ -137,6 +144,7 @@ module.exports = {
       const entry = allKeys.find((e) => e.key === key);
 
       if (!entry) {
+        console.log(`[string/config] Unknown key "${key}" for view, requested by ${interaction.user.tag}`);
         return interaction.reply({ content: `알 수 없는 문자열 키: \`${key}\``, ephemeral: true });
       }
 
@@ -154,6 +162,7 @@ module.exports = {
           }
         );
 
+      console.log(`[string/config] String "${key}" viewed by ${interaction.user.tag}`);
       await interaction.reply({ embeds: [embed], ephemeral: true });
     }
   },

@@ -64,6 +64,7 @@ module.exports = {
 
   async execute(interaction, _repository, _schedulerService, pointAccumulationService) {
     if (!pointAccumulationService) {
+      console.error('[point/config] Point system unavailable');
       return interaction.reply({
         content: '❌ 포인트 시스템을 사용할 수 없습니다.',
         ephemeral: true,
@@ -78,6 +79,7 @@ module.exports = {
 
       const newPoints = pointAccumulationService.setPoints(user.id, points);
 
+      console.log(`[point/config] Points set for ${user.tag} (${user.id}): ${newPoints}, by ${interaction.user.tag}`);
       await interaction.reply({
         content: strings.point.setSuccess(user.id, newPoints),
         ephemeral: true,
@@ -88,6 +90,7 @@ module.exports = {
 
       pointAccumulationService.setConfig(pointsPerAction, cooldownMinutes);
 
+      console.log(`[point/config] Config updated by ${interaction.user.tag}: pointsPerAction=${pointsPerAction}, cooldown=${cooldownMinutes}min`);
       await interaction.reply({
         content: strings.point.configSaved(pointsPerAction, cooldownMinutes),
         ephemeral: true,
@@ -95,6 +98,7 @@ module.exports = {
     } else if (subcommand === '확인') {
       const config = pointAccumulationService.getConfig();
 
+      console.log(`[point/config] Config viewed by ${interaction.user.tag}`);
       await interaction.reply({
         content: strings.point.configDisplay(config.pointsPerAction, config.cooldownMinutes),
         ephemeral: true,
@@ -130,17 +134,20 @@ module.exports = {
 
           if (confirmation.customId === 'confirm_reset_user') {
             pointAccumulationService.resetUserPoints(user.id);
+            console.log(`[point/config] Points reset for ${user.tag} (${user.id}) by ${interaction.user.tag}`);
             await confirmation.update({
               content: strings.point.resetUserSuccess(user.id),
               components: [],
             });
           } else {
+            console.log(`[point/config] User point reset cancelled by ${interaction.user.tag}`);
             await confirmation.update({
               content: strings.point.resetCancelled,
               components: [],
             });
           }
         } catch (error) {
+          console.log(`[point/config] User point reset timed out for ${interaction.user.tag}`);
           await interaction.editReply({
             content: strings.point.resetTimeout,
             components: [],
@@ -174,17 +181,20 @@ module.exports = {
 
           if (confirmation.customId === 'confirm_reset_all') {
             pointAccumulationService.resetAllPoints();
+            console.log(`[point/config] All points reset by ${interaction.user.tag}`);
             await confirmation.update({
               content: strings.point.resetAllSuccess,
               components: [],
             });
           } else {
+            console.log(`[point/config] All points reset cancelled by ${interaction.user.tag}`);
             await confirmation.update({
               content: strings.point.resetCancelled,
               components: [],
             });
           }
         } catch (error) {
+          console.log(`[point/config] All points reset timed out for ${interaction.user.tag}`);
           await interaction.editReply({
             content: strings.point.resetTimeout,
             components: [],

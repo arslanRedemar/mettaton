@@ -19,37 +19,47 @@ class MoonCalendarService {
     const filePath = path.join(this.calendarDir, filename);
 
     if (fs.existsSync(filePath)) {
-      console.log('💾 저장된 달력 사용:', filename);
+      console.log(`[MoonCalendarService] Using cached calendar: ${filename}`);
       return fs.readFileSync(filePath);
     }
 
-    console.log('🌙 달력 크롤링 중...');
-    const browser = await puppeteer.launch({
-      headless: true,
-      executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium',
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
+    console.log('[MoonCalendarService] Crawling moon calendar...');
+    let browser;
+    try {
+      browser = await puppeteer.launch({
+        headless: true,
+        executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium',
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      });
 
-    const page = await browser.newPage();
-    await page.setViewport({ width: 1200, height: 800 });
-    await page.goto('https://kr.rhythmofnature.net/dal-uiwisang', { waitUntil: 'networkidle2' });
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1200, height: 800 });
+      await page.goto('https://kr.rhythmofnature.net/dal-uiwisang', { waitUntil: 'networkidle2' });
 
-    const calendarSelector = '#moon-calendar';
-    const calendar = await page.$(calendarSelector);
+      const calendarSelector = '#moon-calendar';
+      const calendar = await page.$(calendarSelector);
 
-    let buffer;
-    if (calendar) {
-      buffer = await calendar.screenshot({ type: 'png' });
-    } else {
-      buffer = await page.screenshot({ fullPage: true, type: 'png' });
+      let buffer;
+      if (calendar) {
+        buffer = await calendar.screenshot({ type: 'png' });
+      } else {
+        console.log('[MoonCalendarService] Calendar element not found, taking full page screenshot');
+        buffer = await page.screenshot({ fullPage: true, type: 'png' });
+      }
+
+      await browser.close();
+
+      fs.writeFileSync(filePath, buffer);
+      console.log(`[MoonCalendarService] Calendar saved successfully: ${filename}`);
+
+      return buffer;
+    } catch (error) {
+      console.error(`[MoonCalendarService] Failed to crawl calendar:`, error);
+      if (browser) {
+        try { await browser.close(); } catch { /* ignore close errors */ }
+      }
+      throw error;
     }
-
-    await browser.close();
-
-    fs.writeFileSync(filePath, buffer);
-    console.log('✅ 달력 저장 완료:', filename);
-
-    return buffer;
   }
 }
 

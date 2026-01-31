@@ -64,17 +64,22 @@ function registerEvents() {
     if (event.once) {
       client.once(event.name, (...args) => event.execute(...args));
     } else {
-      client.on(event.name, (...args) => {
-        if (event.name === 'interactionCreate') {
-          event.execute(...args, repository, schedulerService, pointAccumulationService);
-        } else if (event.name === 'messageCreate') {
-          event.execute(...args, { moonCalendarService, repository, pointAccumulationService });
-        } else if (event.name === 'messageDelete') {
-          event.execute(...args, repository);
-        } else if (event.name === 'messageReactionAdd' || event.name === 'messageReactionRemove') {
-          event.execute(...args, repository, pointAccumulationService);
-        } else {
-          event.execute(...args);
+      client.on(event.name, async (...args) => {
+        try {
+          if (event.name === 'interactionCreate') {
+            await event.execute(...args, repository, schedulerService, pointAccumulationService);
+          } else if (event.name === 'messageCreate') {
+            await event.execute(...args, { moonCalendarService, repository, pointAccumulationService });
+          } else if (event.name === 'messageDelete') {
+            await event.execute(...args, repository);
+          } else if (event.name === 'messageReactionAdd' || event.name === 'messageReactionRemove') {
+            const [reaction, reactionUser] = args;
+            await event.execute(reaction, reactionUser, repository, pointAccumulationService);
+          } else {
+            await event.execute(...args);
+          }
+        } catch (error) {
+          console.error(`[${event.name}] Event handler error:`, error);
         }
       });
     }

@@ -3,14 +3,14 @@ const strings = require('./strings');
 
 module.exports = {
   name: 'interactionCreate',
-  async execute(interaction, repository, schedulerService) {
+  async execute(interaction, repository, schedulerService, pointAccumulationService) {
     if (interaction.isAutocomplete()) {
       const command = commands.find((cmd) => cmd.data.name === interaction.commandName);
       if (command && command.autocomplete) {
         try {
           await command.autocomplete(interaction);
         } catch (error) {
-          console.error('Autocomplete error:', error);
+          console.error(`[interactionCreate] Autocomplete error for /${interaction.commandName}:`, error);
         }
       }
       return;
@@ -21,14 +21,18 @@ module.exports = {
     const command = commands.find((cmd) => cmd.data.name === interaction.commandName);
 
     if (!command) {
-      console.error(strings.interactionCreate.commandNotFound(interaction.commandName));
+      console.error(`[interactionCreate] Command not found: /${interaction.commandName} (user: ${interaction.user.tag})`);
       return;
     }
 
+    const userTag = interaction.user.tag;
+    const userId = interaction.user.id;
+
     try {
-      await command.execute(interaction, repository, schedulerService);
+      await command.execute(interaction, repository, schedulerService, pointAccumulationService);
+      console.log(`[interactionCreate] Command /${interaction.commandName} executed successfully (user: ${userTag}, ${userId})`);
     } catch (error) {
-      console.error(strings.interactionCreate.commandError(interaction.commandName), error);
+      console.error(`[interactionCreate] Command /${interaction.commandName} failed (user: ${userTag}, ${userId}):`, error);
       const reply = { content: strings.interactionCreate.executionError, ephemeral: true };
       if (interaction.replied || interaction.deferred) {
         await interaction.followUp(reply);

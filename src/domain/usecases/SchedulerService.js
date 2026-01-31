@@ -58,24 +58,24 @@ class SchedulerService {
   async sendMeetingAnnouncement() {
     const meetingConfig = this.repository.getMeetingConfig();
     if (!meetingConfig || !meetingConfig.enabled) {
-      console.log('수행 모임 알림이 비활성화 상태입니다.');
+      console.log('[SchedulerService] Meeting announcement skipped - disabled');
       return;
     }
 
     const guild = this.client.guilds.cache.get(config.guildId);
     if (!guild) {
-      console.error('길드 찾기 실패');
+      console.error(`[SchedulerService] Guild not found (ID: ${config.guildId})`);
       return;
     }
 
-    // 채널 ID로 찾기
     const channel = guild.channels.cache.get(meetingConfig.channelId);
     if (!channel || !channel.isTextBased()) {
-      console.error(`수행계획방 찾기 실패 (채널 ID: ${meetingConfig.channelId})`);
+      console.error(`[SchedulerService] Meeting channel not found or not text-based (ID: ${meetingConfig.channelId})`);
       return;
     }
 
     const meetingCount = this.repository.incrementMeetingCount();
+    console.log(`[SchedulerService] Sending meeting #${meetingCount} announcement to channel ${meetingConfig.channelId}`);
     let participants = new Set();
 
     const formatMessage = (count, isCompleted = false) => {
@@ -106,8 +106,10 @@ class SchedulerService {
     collector.on('collect', async (reaction, user) => {
       if (reaction.emoji.name === '✅') {
         participants.add(user.id);
+        console.log(`[SchedulerService] Meeting #${meetingCount} participant added: ${user.tag} (${user.id})`);
       } else if (reaction.emoji.name === '❌') {
         participants.delete(user.id);
+        console.log(`[SchedulerService] Meeting #${meetingCount} participant removed: ${user.tag} (${user.id})`);
       }
 
       await msg.edit(formatMessage(meetingCount));
@@ -116,12 +118,14 @@ class SchedulerService {
     collector.on('dispose', async (reaction, user) => {
       if (reaction.emoji.name === '✅') {
         participants.delete(user.id);
+        console.log(`[SchedulerService] Meeting #${meetingCount} participant left: ${user.tag} (${user.id})`);
       }
 
       await msg.edit(formatMessage(meetingCount));
     });
 
     collector.on('end', async () => {
+      console.log(`[SchedulerService] Meeting #${meetingCount} collection ended. Final participants: ${participants.size}`);
       await msg.edit(formatMessage(meetingCount, true));
     });
   }

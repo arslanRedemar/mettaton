@@ -10,6 +10,7 @@ module.exports = {
     const lectures = repository.getAllLectures();
 
     if (lectures.length === 0) {
+      console.log(`[schedule/list] No schedules found, requested by ${interaction.user.tag}`);
       return interaction.reply(strings.schedule.listEmpty);
     }
 
@@ -33,6 +34,7 @@ module.exports = {
       });
     }
 
+    console.log(`[schedule/list] Listed ${lectures.length} schedule(s), requested by ${interaction.user.tag}`);
     await interaction.reply({ embeds: [embed], ephemeral: true });
   },
 };

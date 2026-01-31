@@ -42,6 +42,7 @@ module.exports = {
     }
 
     if (inactiveMembers.length === 0) {
+      console.log(`[inactive/kick] No kickable inactive members found, requested by ${interaction.user.tag}`);
       return interaction.reply({ content: strings.inactive.kickNoTarget, ephemeral: true });
     }
 
@@ -70,6 +71,7 @@ module.exports = {
       });
 
       if (confirmation.customId === 'inactive_kick_cancel') {
+        console.log(`[inactive/kick] Kick cancelled by ${interaction.user.tag}`);
         return confirmation.update({
           content: strings.inactive.kickCancelled,
           components: [],
@@ -87,8 +89,10 @@ module.exports = {
       for (let i = 0; i < inactiveMembers.length; i++) {
         try {
           await inactiveMembers[i].kick(`비활동 ${days}일 이상`);
+          console.log(`[inactive/kick] Kicked ${inactiveMembers[i].user.tag} (${inactiveMembers[i].id})`);
           success++;
-        } catch {
+        } catch (error) {
+          console.error(`[inactive/kick] Failed to kick ${inactiveMembers[i].user.tag} (${inactiveMembers[i].id}):`, error);
           fail++;
         }
 
@@ -100,15 +104,18 @@ module.exports = {
       }
 
       if (fail === 0) {
+        console.log(`[inactive/kick] All ${success} member(s) kicked successfully by ${interaction.user.tag}`);
         await interaction.editReply({
           content: strings.inactive.kickSuccess(success),
         });
       } else {
+        console.log(`[inactive/kick] Kick completed: ${success} success, ${fail} failed, by ${interaction.user.tag}`);
         await interaction.editReply({
           content: strings.inactive.kickPartialFail(success, fail),
         });
       }
     } catch {
+      console.log(`[inactive/kick] Kick confirmation timed out for ${interaction.user.tag}`);
       await interaction.editReply({
         content: strings.inactive.kickTimeout,
         components: [],

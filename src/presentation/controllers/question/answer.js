@@ -16,6 +16,7 @@ module.exports = {
     const question = repository.getQuestionById(id);
 
     if (!question) {
+      console.log(`[question/answer] Question #${id} not found, requested by ${interaction.user.tag}`);
       return interaction.reply(strings.question.answerNotFound);
     }
 
@@ -42,9 +43,12 @@ module.exports = {
             ],
           });
         }
-      } catch {}
+      } catch (error) {
+        console.error(`[question/answer] Failed to update Discord message for question #${id}:`, error);
+      }
     }
 
+    console.log(`[question/answer] Question #${id} answered by ${interaction.user.tag}`);
     await interaction.reply(strings.question.answerSuccess(id));
   },
 };

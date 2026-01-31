@@ -17,6 +17,7 @@ module.exports = {
 
   async execute(interaction, _repository, _schedulerService, pointAccumulationService) {
     if (!pointAccumulationService) {
+      console.error('[point/ranking] Point system unavailable');
       return interaction.reply({
         content: '❌ 포인트 시스템을 사용할 수 없습니다.',
         ephemeral: true,
@@ -27,6 +28,7 @@ module.exports = {
     const ranking = pointAccumulationService.getRanking(limit);
 
     if (ranking.length === 0) {
+      console.log(`[point/ranking] Empty ranking, requested by ${interaction.user.tag}`);
       await interaction.reply({
         content: strings.point.rankingEmpty,
         ephemeral: true,
@@ -34,12 +36,12 @@ module.exports = {
       return;
     }
 
-    // Build ranking message
     const title = strings.point.rankingTitle;
     const items = ranking
       .map((ap, index) => strings.point.rankingItem(index + 1, ap.userId, ap.points))
       .join('\n');
 
+    console.log(`[point/ranking] Ranking displayed (top ${ranking.length}), requested by ${interaction.user.tag}`);
     await interaction.reply({
       content: `${title}\n\n${items}`,
       ephemeral: true,

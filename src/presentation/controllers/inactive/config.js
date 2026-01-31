@@ -18,6 +18,7 @@ module.exports = {
   async execute(interaction, repository) {
     const days = interaction.options.getInteger('일수');
     repository.setInactiveDays(days);
+    console.log(`[inactive/config] Inactive threshold set to ${days} days by ${interaction.user.tag}`);
     await interaction.reply({ content: strings.inactive.configSaved(days), ephemeral: true });
   },
 };
