@@ -1,5 +1,5 @@
 
-FROM node:lts-slim
+FROM node:20-slim
 
 # Install build dependencies for better-sqlite3 and Chromium for puppeteer
 RUN apt-get update && apt-get install -y --no-install-recommends \
