@@ -23,11 +23,9 @@ COPY . .
 # Create data directory for SQLite database
 RUN mkdir -p /app/data
 
-# Run as non-root user for security
-RUN groupadd -g 1001 botuser && \
-    useradd -u 1001 -g botuser botuser && \
-    chown -R botuser:botuser /app
-USER botuser
+# Run as non-root user for security (node user uid=1000 matches host pi user)
+RUN chown -R node:node /app
+USER node
 
 # Start the bot
 CMD ["node", "src/index.js"]
