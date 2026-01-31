@@ -14,4 +14,4 @@ StandardError=journal
 # Resource limits for Raspberry Pi 3B+
 Nice=19
 IOSchedulingClass=idle
-MemoryMax=256M
+MemoryMax=512M

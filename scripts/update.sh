@@ -19,6 +19,10 @@ HEALTH_CHECK_RETRIES=6
 HEALTH_CHECK_INTERVAL=10
 LOCK_FILE="/tmp/mettaton-update.lock"
 
+# Docker Compose timeout for slow Raspberry Pi builds (default 60s is too low)
+export COMPOSE_HTTP_TIMEOUT=600
+export DOCKER_CLIENT_TIMEOUT=600
+
 # ============================================================
 # Argument Parsing
 # ============================================================
