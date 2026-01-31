@@ -1,21 +1,39 @@
+# ============================================================
+# Stage 1: Build native modules (better-sqlite3)
+# ============================================================
+FROM node:20-slim AS builder
 
-FROM node:20-slim
-
-# Install build dependencies for better-sqlite3 and Chromium for puppeteer
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 make g++ chromium gosu \
+    python3 \
+    make \
+    g++ \
     && rm -rf /var/lib/apt/lists/*
 
-
-# Create app directory
 WORKDIR /app
 
-# Install dependencies first (better layer caching)
 COPY package*.json ./
 RUN npm ci --only=production
 
-# Remove build dependencies to reduce image size
-RUN apt-get purge -y python3 make g++ && apt-get autoremove -y
+# ============================================================
+# Stage 2: Runtime (no build tools)
+# ============================================================
+FROM node:20-slim
+
+# Chromium for puppeteer-core (separate layer, largest download)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    chromium \
+    && rm -rf /var/lib/apt/lists/*
+
+# gosu for entrypoint privilege drop (separate layer, small)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gosu \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy pre-compiled node_modules from builder
+COPY --from=builder /app/node_modules ./node_modules
+COPY package*.json ./
 
 # Copy source code
 COPY . .
@@ -29,6 +47,8 @@ RUN chown -R node:node /app
 # Copy entrypoint script
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
+
+ENV CHROMIUM_PATH=/usr/bin/chromium
 
 # Entrypoint fixes data dir permissions then drops to node user via gosu
 ENTRYPOINT ["/entrypoint.sh"]

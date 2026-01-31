@@ -2,7 +2,9 @@ version: '3.8'
 
 services:
   mettaton:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: mettaton-bot
     restart: unless-stopped
     environment:
@@ -14,6 +16,7 @@ services:
       - QUESTION_CHANNEL_ID=${QUESTION_CHANNEL_ID}
       - PRACTICE_CHANNEL_ID=${PRACTICE_CHANNEL_ID}
       - DB_PATH=/app/data/mettaton.db
+      - CHROMIUM_PATH=/usr/bin/chromium
     volumes:
       - ./data:/app/data
       - ./moon_calendars:/app/moon_calendars
