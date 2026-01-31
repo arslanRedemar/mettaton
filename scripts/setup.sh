@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Mettaton Discord Bot - Raspberry Pi Setup Script
-# Raspbian OS용 자동 설치 스크립트
+# Raspbian OS automated setup with auto-update pipeline
 
 set -e
 
@@ -9,44 +9,44 @@ echo "=========================================="
 echo "  Mettaton Discord Bot 설치 스크립트"
 echo "=========================================="
 
-# 1. 시스템 업데이트
-echo "[1/7] 시스템 업데이트 중..."
+# 1. System update
+echo "[1/10] Updating system..."
 sudo apt-get update && sudo apt-get upgrade -y
 
-# 2. Docker 설치
-echo "[2/7] Docker 설치 중..."
+# 2. Install Docker
+echo "[2/10] Installing Docker..."
 if ! command -v docker &> /dev/null; then
     curl -fsSL https://get.docker.com -o get-docker.sh
     sudo sh get-docker.sh
     sudo usermod -aG docker $USER
     rm get-docker.sh
-    echo "Docker 설치 완료"
+    echo "Docker installed"
 else
-    echo "Docker 이미 설치됨"
+    echo "Docker already installed"
 fi
 
-# 3. Docker Compose 설치 확인
-echo "[3/7] Docker Compose 확인 중..."
+# 3. Verify Docker Compose
+echo "[3/10] Verifying Docker Compose..."
 if ! docker compose version &> /dev/null; then
     sudo apt-get install -y docker-compose-plugin
 fi
 
-# 4. 프로젝트 디렉토리 설정
-echo "[4/7] 프로젝트 설정 중..."
+# 4. Setup project directory
+echo "[4/10] Setting up project directory..."
 PROJECT_DIR="/home/pi/mettaton"
 
 if [ ! -d "$PROJECT_DIR" ]; then
-    echo "프로젝트를 $PROJECT_DIR 에 클론하세요"
+    echo "Please clone the project to $PROJECT_DIR:"
     echo "git clone https://github.com/arslanRedemar/mettaton.git $PROJECT_DIR"
 fi
 
-# 5. 데이터 디렉토리 생성
-echo "[5/7] 데이터 디렉토리 생성..."
+# 5. Create data directories
+echo "[5/10] Creating data directories..."
 mkdir -p "$PROJECT_DIR/data"
 mkdir -p "$PROJECT_DIR/moon_calendars"
 
-# 6. 환경변수 파일 생성
-echo "[6/7] 환경변수 설정..."
+# 6. Create environment file
+echo "[6/10] Setting up environment variables..."
 if [ ! -f "$PROJECT_DIR/.env" ]; then
     cat > "$PROJECT_DIR/.env" << 'EOF'
 TOKEN=your_discord_bot_token
@@ -55,25 +55,47 @@ GUILD_ID=your_guild_id
 GREETING_CHANEL_ID=your_greeting_channel_id
 DB_PATH=/app/data/mettaton.db
 EOF
-    echo ".env 파일이 생성되었습니다. 값을 수정하세요:"
+    echo ".env file created. Please edit the values:"
     echo "  nano $PROJECT_DIR/.env"
 fi
 
-# 7. systemd 서비스 등록
-echo "[7/7] 부팅 시 자동 실행 설정..."
+# 7. Register systemd bot service
+echo "[7/10] Registering bot service for auto-start..."
 sudo cp "$PROJECT_DIR/scripts/mettaton.service" /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable mettaton.service
 
+# 8. Create backup and log directories
+echo "[8/10] Creating backup and log directories..."
+mkdir -p "$PROJECT_DIR/backups"
+mkdir -p "$PROJECT_DIR/logs"
+
+# 9. Configure git for auto-updates
+echo "[9/10] Configuring git for auto-updates..."
+cd "$PROJECT_DIR"
+git config pull.rebase false
+chmod +x "$PROJECT_DIR/scripts/update.sh"
+
+# 10. Enable auto-update timer
+echo "[10/10] Enabling auto-update timer..."
+sudo cp "$PROJECT_DIR/scripts/mettaton-update.service" /etc/systemd/system/
+sudo cp "$PROJECT_DIR/scripts/mettaton-update.timer" /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable mettaton-update.timer
+sudo systemctl start mettaton-update.timer
+
 echo ""
 echo "=========================================="
-echo "  설치 완료!"
+echo "  Setup Complete!"
 echo "=========================================="
 echo ""
-echo "다음 단계:"
-echo "1. .env 파일 수정: nano $PROJECT_DIR/.env"
-echo "2. 재부팅하거나 서비스 시작: sudo systemctl start mettaton"
-echo "3. 로그 확인: docker logs -f mettaton-bot"
-echo "4. DB 확인: sqlite3 $PROJECT_DIR/data/mettaton.db"
+echo "Next steps:"
+echo "1. Edit .env file: nano $PROJECT_DIR/.env"
+echo "2. Reboot or start service: sudo systemctl start mettaton"
+echo "3. View bot logs: docker logs -f mettaton-bot"
+echo "4. Check DB: sqlite3 $PROJECT_DIR/data/mettaton.db"
+echo "5. Check auto-update timer: systemctl status mettaton-update.timer"
+echo "6. View deploy logs: tail -f $PROJECT_DIR/logs/deploy.log"
+echo "7. Manual update: bash $PROJECT_DIR/scripts/update.sh --force --verbose"
 echo ""
-echo "* Docker 그룹 적용을 위해 재부팅을 권장합니다: sudo reboot"
+echo "* Reboot recommended for Docker group changes: sudo reboot"

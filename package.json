@@ -6,7 +6,9 @@
     "start": "node src/index.js",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "test:shell": "bash tests/scripts/run_all_tests.sh",
+    "test:all": "npm test && npm run test:shell"
   },
   "keywords": [],
   "author": "",
@@ -18,7 +20,8 @@
     "discord.js": "^14.22.1",
     "dotenv": "^17.2.2",
     "node-cron": "^4.2.1",
-    "node-schedule": "^2.1.1"
+    "node-schedule": "^2.1.1",
+    "puppeteer-core": "^24.6.0"
   },
   "devDependencies": {
     "jest": "^30.2.0"

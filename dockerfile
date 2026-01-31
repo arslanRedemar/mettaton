@@ -1,7 +1,7 @@
 FROM node:lts-alpine3.23
 
-# Install build dependencies for better-sqlite3
-RUN apk add --no-cache python3 make g++
+# Install build dependencies for better-sqlite3 and Chromium for puppeteer
+RUN apk add --no-cache python3 make g++ chromium
 
 # Create app directory
 WORKDIR /app

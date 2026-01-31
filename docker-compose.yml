@@ -9,7 +9,10 @@ services:
       - TOKEN=${TOKEN}
       - CLIENT_ID=${CLIENT_ID}
       - GUILD_ID=${GUILD_ID}
-      - GREETING_CHANEL_ID=${GREETING_CHANEL_ID}
+      - GREETING_CHANNEL_ID=${GREETING_CHANNEL_ID}
+      - SCHEDULE_CHANNEL_ID=${SCHEDULE_CHANNEL_ID}
+      - QUESTION_CHANNEL_ID=${QUESTION_CHANNEL_ID}
+      - PRACTICE_CHANNEL_ID=${PRACTICE_CHANNEL_ID}
       - DB_PATH=/app/data/mettaton.db
     volumes:
       - ./data:/app/data

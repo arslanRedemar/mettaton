@@ -1,0 +1,17 @@
+[Unit]
+Description=Mettaton Discord Bot Auto-Update
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=pi
+WorkingDirectory=/home/pi/mettaton
+ExecStart=/bin/bash /home/pi/mettaton/scripts/update.sh
+StandardOutput=journal
+StandardError=journal
+
+# Resource limits for Raspberry Pi 3B+
+Nice=19
+IOSchedulingClass=idle
+MemoryMax=256M
