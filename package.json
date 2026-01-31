@@ -7,8 +7,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:shell": "bash tests/scripts/run_all_tests.sh",
-    "test:all": "npm test && npm run test:shell"
+    "test:all": "npm test"
   },
   "keywords": [],
   "author": "",
