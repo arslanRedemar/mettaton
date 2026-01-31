@@ -13,7 +13,7 @@
 - JSDoc for public functions
 - 한글 주석은 영어로 변환
 
-## Folder Structure and Architecture
+## Directory Structure
 
 
 ```
@@ -50,3 +50,6 @@ tests/
 ```
 
 ## Important Notes
+
+- Every Feature must be **logged**!
+- Every Feature must be **Testable**.
