@@ -69,7 +69,7 @@ module.exports = {
       const activity = interaction.options.getString('활동내용');
 
       // Validate time format
-      const timeRegex = /^([01]?\d|2[0-3]):([0-5]\d)$/;
+      const timeRegex = /^(([01]?\d|2[0-3]):([0-5]\d)|24:00)$/;
       if (!timeRegex.test(meetingStartTime) || !timeRegex.test(meetingEndTime)) {
         console.log(`[meeting/config] Invalid time format by ${interaction.user.tag}: start=${meetingStartTime}, end=${meetingEndTime}`);
         return interaction.reply({
