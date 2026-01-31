@@ -78,18 +78,22 @@ class SchedulerService {
     const meetingCount = this.repository.incrementMeetingCount();
     let participants = new Set();
 
-    const formatMessage = (count, participantSize, participantList, isCompleted = false) => {
+    const formatMessage = (count, isCompleted = false) => {
       const completedText = isCompleted ? ' [완료]' : '';
+      const participantMentions = Array.from(participants).map((uid) => `<@${uid}>`).join(' , ');
+      const attendeeText = participants.size > 0
+        ? `참석자 ${participants.size}명 (${participantMentions})`
+        : '참석자 0명';
       return (
         `[제 ${count}차] 수행 모임${completedText}\n` +
         `장소: ${meetingConfig.location}\n` +
         `시각: ${new Date().toLocaleDateString('ko-KR')} - ${meetingConfig.meetingStartTime} ~ ${meetingConfig.meetingEndTime}\n` +
-        `인원: ${participantSize}인(${participantList})\n` +
+        `${attendeeText}\n` +
         `활동 내용: ${meetingConfig.activity}`
       );
     };
 
-    const msg = await channel.send(formatMessage(meetingCount, 0, '아직 없음'));
+    const msg = await channel.send(formatMessage(meetingCount));
 
     await msg.react('✅');
     await msg.react('❌');
@@ -97,25 +101,28 @@ class SchedulerService {
     const filter = (reaction, user) =>
       !user.bot && (reaction.emoji.name === '✅' || reaction.emoji.name === '❌');
 
-    const collector = msg.createReactionCollector({ filter, time: 6 * 60 * 60 * 1000 });
+    const collector = msg.createReactionCollector({ filter, time: 6 * 60 * 60 * 1000, dispose: true });
 
     collector.on('collect', async (reaction, user) => {
-      const member = await msg.guild.members.fetch(user.id);
-      const displayName = member.displayName;
-
       if (reaction.emoji.name === '✅') {
-        participants.add(displayName);
+        participants.add(user.id);
       } else if (reaction.emoji.name === '❌') {
-        participants.delete(displayName);
+        participants.delete(user.id);
       }
 
-      const participantList = Array.from(participants).join(', ') || '아직 없음';
-      await msg.edit(formatMessage(meetingCount, participants.size, participantList));
+      await msg.edit(formatMessage(meetingCount));
+    });
+
+    collector.on('dispose', async (reaction, user) => {
+      if (reaction.emoji.name === '✅') {
+        participants.delete(user.id);
+      }
+
+      await msg.edit(formatMessage(meetingCount));
     });
 
     collector.on('end', async () => {
-      const participantList = Array.from(participants).join(', ') || '아직 없음';
-      await msg.edit(formatMessage(meetingCount, participants.size, participantList, true));
+      await msg.edit(formatMessage(meetingCount, true));
     });
   }
 }

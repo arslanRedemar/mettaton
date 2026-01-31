@@ -7,7 +7,7 @@ class QuestionMapper {
   /**
    * DB row → Question Entity
    */
-  static toEntity(row) {
+  static toEntity(row, attendees = []) {
     if (!row) return null;
     return new Question({
       id: row.id,
@@ -15,6 +15,7 @@ class QuestionMapper {
       question: row.question,
       answer: row.answer,
       answeredBy: row.answered_by,
+      attendees,
       messageId: row.message_id,
     });
   }

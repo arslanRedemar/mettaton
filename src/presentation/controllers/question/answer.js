@@ -1,5 +1,6 @@
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const config = require('../../../../core/config');
+const strings = require('../../interfaces/strings');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -15,7 +16,7 @@ module.exports = {
     const question = repository.getQuestionById(id);
 
     if (!question) {
-      return interaction.reply('❌ 해당 ID의 질문이 없습니다.');
+      return interaction.reply(strings.question.answerNotFound);
     }
 
     question.setAnswer(answer, interaction.user.id);
@@ -26,13 +27,24 @@ module.exports = {
       try {
         const msg = await channel.messages.fetch(question.messageId);
         if (msg) {
-          await msg.edit(
-            `❓ **질문 #${question.id}**\n${question.question}\n작성자: <@${question.author}>\n\n✅ **답변:** ${answer}\n(답변자: <@${interaction.user.id}>)`
-          );
+          const attendeeInfo = question.attendees.length > 0
+            ? `${question.attendees.length}명 (${question.attendees.map((uid) => `<@${uid}>`).join(', ')})`
+            : '0명';
+          await msg.edit({
+            content: '',
+            embeds: [
+              new EmbedBuilder()
+                .setTitle(strings.question.embedTitle(question.id))
+                .setDescription(
+                  strings.question.embedDescriptionAnswered(question.question, question.author, answer, interaction.user.id, attendeeInfo),
+                )
+                .setColor(0x00cc66),
+            ],
+          });
         }
       } catch {}
     }
 
-    await interaction.reply(`✅ 질문 #${id}에 답변 등록 완료`);
+    await interaction.reply(strings.question.answerSuccess(id));
   },
 };

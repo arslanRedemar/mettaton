@@ -1,5 +1,6 @@
 const { SlashCommandBuilder } = require('discord.js');
 const config = require('../../../../core/config');
+const strings = require('../../interfaces/strings');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -12,7 +13,7 @@ module.exports = {
     const question = repository.deleteQuestion(questionId);
 
     if (!question) {
-      return interaction.reply({ content: `❌ 질문 ID ${questionId}를 찾을 수 없습니다.`, ephemeral: true });
+      return interaction.reply({ content: strings.question.deleteNotFound(questionId), ephemeral: true });
     }
 
     const channel = interaction.guild.channels.cache.get(config.channels.question);
@@ -21,10 +22,10 @@ module.exports = {
         const msg = await channel.messages.fetch(question.messageId);
         if (msg) await msg.delete();
       } catch (err) {
-        console.log('질문 메시지 삭제 실패:', err);
+        console.log(strings.question.deleteMessageFail, err);
       }
     }
 
-    await interaction.reply({ content: `🗑 질문 #${question.id} 삭제 완료`, ephemeral: true });
+    await interaction.reply({ content: strings.question.deleteSuccess(question.id), ephemeral: true });
   },
 };

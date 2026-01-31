@@ -12,7 +12,7 @@ const { initializeDatabase, closeDatabase } = require('./data/datasource/databas
 const { SqliteRepository } = require('./data/repositories');
 
 // Domain Layer - Usecases
-const { SchedulerService, MoonCalendarService, StringService } = require('./domain/usecases');
+const { SchedulerService, MoonCalendarService, StringService, PointAccumulationService } = require('./domain/usecases');
 
 // Presentation Layer
 const commands = require('./presentation/controllers');
@@ -37,6 +37,7 @@ container.register('stringService', stringService);
 
 const moonCalendarService = new MoonCalendarService(path.join(__dirname, '..', config.calendarDir));
 const schedulerService = new SchedulerService(client, repository);
+const pointAccumulationService = new PointAccumulationService(repository);
 
 // Register slash commands
 async function registerCommands() {
@@ -65,11 +66,13 @@ function registerEvents() {
     } else {
       client.on(event.name, (...args) => {
         if (event.name === 'interactionCreate') {
-          event.execute(...args, repository, schedulerService);
+          event.execute(...args, repository, schedulerService, pointAccumulationService);
         } else if (event.name === 'messageCreate') {
-          event.execute(...args, { moonCalendarService });
+          event.execute(...args, { moonCalendarService, repository, pointAccumulationService });
         } else if (event.name === 'messageDelete') {
           event.execute(...args, repository);
+        } else if (event.name === 'messageReactionAdd' || event.name === 'messageReactionRemove') {
+          event.execute(...args, repository, pointAccumulationService);
         } else {
           event.execute(...args);
         }

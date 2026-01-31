@@ -1,6 +1,7 @@
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const Question = require('../../../domain/entities/Question');
 const config = require('../../../../core/config');
+const strings = require('../../interfaces/strings');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -20,11 +21,18 @@ module.exports = {
 
     const channel = interaction.guild.channels.cache.get(config.channels.question);
     if (channel) {
-      const msg = await channel.send(`❓ **질문 #${question.id}**\n${question.question}\n작성자: <@${question.author}>`);
+      const msg = await channel.send({
+        embeds: [
+          new EmbedBuilder()
+            .setTitle(strings.question.embedTitle(question.id))
+            .setDescription(strings.question.embedDescription(question.question, question.author, '0명'))
+            .setColor(0xffaa00),
+        ],
+      });
       question.messageId = msg.id;
       repository.updateQuestion(question);
     }
 
-    await interaction.reply('✅ 질문이 등록되었습니다.');
+    await interaction.reply(strings.question.registerSuccess);
   },
 };

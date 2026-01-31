@@ -148,3 +148,7 @@ moon_calendars/
 # Allow src/data (code layer, not data files)
 !src/data/
 !tests/unit/data/
+
+# Deploy artifacts
+/backups/
+/logs/

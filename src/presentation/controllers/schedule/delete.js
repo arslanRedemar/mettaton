@@ -1,10 +1,11 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const config = require('../../../../core/config');
+const strings = require('../../interfaces/strings');
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('강의삭제')
-    .setDescription('강의를 삭제합니다')
+    .setName('일정삭제')
+    .setDescription('일정을 삭제합니다')
     .addIntegerOption((option) => option.setName('id').setDescription('삭제할 강의 ID').setRequired(true))
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
@@ -13,7 +14,7 @@ module.exports = {
     const lecture = repository.deleteLecture(lectureId);
 
     if (!lecture) {
-      return interaction.reply({ content: `❌ 강의 ID ${lectureId}를 찾을 수 없습니다.`, ephemeral: true });
+      return interaction.reply({ content: strings.schedule.deleteNotFound(lectureId), ephemeral: true });
     }
 
     const channel = interaction.guild.channels.cache.get(config.channels.schedule);
@@ -22,10 +23,10 @@ module.exports = {
         const msg = await channel.messages.fetch(lecture.messageId);
         if (msg) await msg.delete();
       } catch (err) {
-        console.log('강의 메시지 삭제 실패:', err);
+        console.log(strings.schedule.deleteMessageFail, err);
       }
     }
 
-    await interaction.reply({ content: `🗑 강의 [${lecture.title}] 삭제 완료`, ephemeral: true });
+    await interaction.reply({ content: strings.schedule.deleteSuccess(lecture.title), ephemeral: true });
   },
 };

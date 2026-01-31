@@ -16,7 +16,7 @@ module.exports = {
     if (message.channel.id === config.channels.schedule) {
       const deleted = repository.deleteLectureByMessageId(message.id);
       if (deleted) {
-        console.log(strings.messageDelete.lectureDeleted);
+        console.log(strings.messageDelete.scheduleDeleted);
       }
     }
   },

@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, PermissionFlagsBits, ChannelType } = require('discord.js');
+const strings = require('../../interfaces/strings');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -71,7 +72,7 @@ module.exports = {
       const timeRegex = /^([01]?\d|2[0-3]):([0-5]\d)$/;
       if (!timeRegex.test(meetingStartTime) || !timeRegex.test(meetingEndTime)) {
         return interaction.reply({
-          content: '❌ 시간 형식이 올바르지 않습니다. (예: 23:00)',
+          content: strings.meeting.invalidTimeFormat,
           ephemeral: true,
         });
       }
@@ -95,22 +96,18 @@ module.exports = {
         schedulerService.reschedule();
       }
 
+      const scheduleTime = `${String(scheduleHour).padStart(2, '0')}:${String(scheduleMinute).padStart(2, '0')}`;
+      const status = enabled ? strings.meeting.statusEnabled : strings.meeting.statusDisabled;
+
       await interaction.reply({
-        content:
-          `✅ 수행 모임 설정이 저장되었습니다.\n\n` +
-          `📢 알림 채널: <#${channel.id}>\n` +
-          `⏰ 알림 시각: ${String(scheduleHour).padStart(2, '0')}:${String(scheduleMinute).padStart(2, '0')}\n` +
-          `🕐 모임 시각: ${meetingStartTime} ~ ${meetingEndTime}\n` +
-          `📍 장소: ${location}\n` +
-          `📝 활동 내용: ${activity}\n` +
-          `상태: ${enabled ? '✅ 활성화' : '⏸️ 비활성화'}`,
+        content: strings.meeting.configSaved(channel.id, scheduleTime, meetingStartTime, meetingEndTime, location, activity, status),
         ephemeral: true,
       });
     } else if (subcommand === '활성화') {
       const config = repository.getMeetingConfig();
       if (!config) {
         return interaction.reply({
-          content: '❌ 먼저 `/수행설정 설정` 명령어로 설정을 완료해주세요.',
+          content: strings.meeting.noConfig,
           ephemeral: true,
         });
       }
@@ -122,14 +119,14 @@ module.exports = {
       }
 
       await interaction.reply({
-        content: '✅ 수행 모임 알림이 활성화되었습니다.',
+        content: strings.meeting.enableSuccess,
         ephemeral: true,
       });
     } else if (subcommand === '비활성화') {
       const config = repository.getMeetingConfig();
       if (!config) {
         return interaction.reply({
-          content: '❌ 설정된 수행 모임이 없습니다.',
+          content: strings.meeting.noConfigExists,
           ephemeral: true,
         });
       }
@@ -141,27 +138,23 @@ module.exports = {
       }
 
       await interaction.reply({
-        content: '⏸️ 수행 모임 알림이 비활성화되었습니다.',
+        content: strings.meeting.disableSuccess,
         ephemeral: true,
       });
     } else if (subcommand === '확인') {
       const config = repository.getMeetingConfig();
       if (!config) {
         return interaction.reply({
-          content: '❌ 설정된 수행 모임이 없습니다. `/수행설정 설정` 명령어로 설정해주세요.',
+          content: strings.meeting.noConfigView,
           ephemeral: true,
         });
       }
 
+      const scheduleTime = `${String(config.scheduleHour).padStart(2, '0')}:${String(config.scheduleMinute).padStart(2, '0')}`;
+      const status = config.enabled ? strings.meeting.statusEnabled : strings.meeting.statusDisabled;
+
       await interaction.reply({
-        content:
-          `📋 **현재 수행 모임 설정**\n\n` +
-          `📢 알림 채널: <#${config.channelId}>\n` +
-          `⏰ 알림 시각: ${String(config.scheduleHour).padStart(2, '0')}:${String(config.scheduleMinute).padStart(2, '0')}\n` +
-          `🕐 모임 시각: ${config.meetingStartTime} ~ ${config.meetingEndTime}\n` +
-          `📍 장소: ${config.location}\n` +
-          `📝 활동 내용: ${config.activity}\n` +
-          `상태: ${config.enabled ? '✅ 활성화' : '⏸️ 비활성화'}`,
+        content: strings.meeting.configDisplay(config.channelId, scheduleTime, config.meetingStartTime, config.meetingEndTime, config.location, config.activity, status),
         ephemeral: true,
       });
     }

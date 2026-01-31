@@ -35,7 +35,9 @@ describe('SqliteRepository', () => {
     db.exec('DELETE FROM lecture_attendees');
     db.exec('DELETE FROM lectures');
     db.exec('DELETE FROM questions');
+    db.exec('DELETE FROM member_activity');
     db.exec("UPDATE settings SET value = '0' WHERE key = 'meeting_count'");
+    db.exec("UPDATE settings SET value = '90' WHERE key = 'inactive_days'");
   });
 
   describe('Lecture Operations', () => {
@@ -361,6 +363,162 @@ describe('SqliteRepository', () => {
         const result = repository.deleteQuestionByMessageId('nonexistent');
 
         expect(result).toBe(false);
+      });
+    });
+  });
+
+  describe('Member Activity Operations', () => {
+    describe('updateMemberActivity', () => {
+      it('should insert new member activity', () => {
+        repository.updateMemberActivity('user123');
+
+        const activities = repository.getAllMemberActivities();
+        expect(activities.length).toBe(1);
+        expect(activities[0].user_id).toBe('user123');
+        expect(activities[0].last_active_at).toBeDefined();
+      });
+
+      it('should update existing member activity', () => {
+        repository.updateMemberActivity('user123');
+        const before = repository.getAllMemberActivities();
+
+        repository.updateMemberActivity('user123');
+        const after = repository.getAllMemberActivities();
+
+        expect(after.length).toBe(1);
+        expect(after[0].user_id).toBe('user123');
+      });
+
+      it('should track multiple members independently', () => {
+        repository.updateMemberActivity('user1');
+        repository.updateMemberActivity('user2');
+        repository.updateMemberActivity('user3');
+
+        const activities = repository.getAllMemberActivities();
+        expect(activities.length).toBe(3);
+        const userIds = activities.map((a) => a.user_id).sort();
+        expect(userIds).toEqual(['user1', 'user2', 'user3']);
+      });
+    });
+
+    describe('getAllMemberActivities', () => {
+      it('should return empty array when no activities', () => {
+        const activities = repository.getAllMemberActivities();
+        expect(activities).toEqual([]);
+      });
+    });
+
+    describe('getInactiveDays', () => {
+      it('should return default 90 days', () => {
+        const days = repository.getInactiveDays();
+        expect(days).toBe(90);
+      });
+    });
+
+    describe('setInactiveDays', () => {
+      it('should update inactive days setting', () => {
+        repository.setInactiveDays(30);
+        expect(repository.getInactiveDays()).toBe(30);
+      });
+
+      it('should persist the setting', () => {
+        repository.setInactiveDays(180);
+        const days = repository.getInactiveDays();
+        expect(days).toBe(180);
+      });
+    });
+  });
+
+  describe('Sync Operations', () => {
+    describe('insertMemberActivityIfMissing', () => {
+      it('should insert when missing and return true', () => {
+        const inserted = repository.insertMemberActivityIfMissing('newUser');
+
+        expect(inserted).toBe(true);
+        const activities = repository.getAllMemberActivities();
+        expect(activities.some((a) => a.user_id === 'newUser')).toBe(true);
+      });
+
+      it('should not overwrite existing and return false', () => {
+        repository.updateMemberActivity('existingUser');
+        const inserted = repository.insertMemberActivityIfMissing('existingUser');
+
+        expect(inserted).toBe(false);
+        const activities = repository.getAllMemberActivities();
+        expect(activities.filter((a) => a.user_id === 'existingUser').length).toBe(1);
+      });
+    });
+
+    describe('deleteMemberActivity', () => {
+      it('should remove member activity record', () => {
+        repository.updateMemberActivity('userToDelete');
+        expect(repository.getAllMemberActivities().length).toBe(1);
+
+        repository.deleteMemberActivity('userToDelete');
+
+        expect(repository.getAllMemberActivities().length).toBe(0);
+      });
+    });
+
+    describe('removeAttendee', () => {
+      it('should remove a single attendee from a lecture', () => {
+        const lecture = repository.addLecture(
+          new Lecture({
+            title: 'Attendee removal test',
+            date: '2025-01-28',
+            start: '10:00',
+            end: '12:00',
+            location: 'Online',
+            teacher: 'Teacher',
+          })
+        );
+        lecture.addAttendee('user1');
+        lecture.addAttendee('user2');
+        repository.updateLecture(lecture);
+
+        repository.removeAttendee(lecture.id, 'user1');
+
+        const updated = repository.getLectureById(lecture.id);
+        expect(updated.attendees).not.toContain('user1');
+        expect(updated.attendees).toContain('user2');
+      });
+    });
+
+    describe('clearLectureMessageId', () => {
+      it('should set lecture message_id to null', () => {
+        const lecture = repository.addLecture(
+          new Lecture({
+            title: 'Message ID clear test',
+            date: '2025-01-28',
+            start: '10:00',
+            end: '12:00',
+            location: 'Online',
+            teacher: 'Teacher',
+            messageId: 'msg456',
+          })
+        );
+
+        repository.clearLectureMessageId(lecture.id);
+
+        const updated = repository.getLectureById(lecture.id);
+        expect(updated.messageId).toBeNull();
+      });
+    });
+
+    describe('clearQuestionMessageId', () => {
+      it('should set question message_id to null', () => {
+        const question = repository.addQuestion(
+          new Question({
+            author: 'user123',
+            question: 'Message ID clear test',
+            messageId: 'qmsg456',
+          })
+        );
+
+        repository.clearQuestionMessageId(question.id);
+
+        const updated = repository.getQuestionById(question.id);
+        expect(updated.messageId).toBeNull();
       });
     });
   });

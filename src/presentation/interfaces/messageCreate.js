@@ -3,8 +3,26 @@ const strings = require('./strings');
 
 module.exports = {
   name: 'messageCreate',
-  async execute(message, { moonCalendarService }) {
+  async execute(message, { moonCalendarService, repository, pointAccumulationService }) {
     if (message.author.bot) return;
+
+    // Member activity tracking
+    if (repository && message.guild) {
+      try {
+        repository.updateMemberActivity(message.author.id);
+      } catch {
+        // Ignore activity tracking errors
+      }
+    }
+
+    // Point accumulation (automatic, no notification)
+    if (pointAccumulationService && message.guild) {
+      try {
+        pointAccumulationService.tryAccumulate(message.author.id);
+      } catch {
+        // Ignore point accumulation errors
+      }
+    }
 
     if (message.content === strings.messageCreate.moonCommand) {
       const msg = await message.channel.send(strings.messageCreate.moonLoading);

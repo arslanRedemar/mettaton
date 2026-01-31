@@ -91,6 +91,7 @@ describe('Question Entity', () => {
         question: '테스트 질문입니다.',
         answer: null,
         answeredBy: null,
+        attendees: [],
         messageId: 'msg123',
       });
     });
@@ -107,6 +108,7 @@ describe('Question Entity', () => {
         question: '테스트 질문입니다.',
         answer: '답변 내용',
         answeredBy: 'admin456',
+        attendees: [],
         messageId: 'msg123',
       });
     });

@@ -41,6 +41,15 @@ function initializeDatabase(dbPath) {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS question_attendees (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      question_id INTEGER NOT NULL,
+      user_id TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE,
+      UNIQUE(question_id, user_id)
+    );
+
     CREATE TABLE IF NOT EXISTS settings (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
@@ -66,8 +75,33 @@ function initializeDatabase(dbPath) {
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
-    -- Initialize meeting count if not exists
+    CREATE TABLE IF NOT EXISTS member_activity (
+      user_id TEXT PRIMARY KEY,
+      last_active_at DATETIME NOT NULL,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS activity_points (
+      user_id TEXT PRIMARY KEY,
+      points INTEGER NOT NULL DEFAULT 0,
+      last_accumulated_at DATETIME,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS point_config (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      points_per_action INTEGER NOT NULL DEFAULT 100,
+      cooldown_minutes INTEGER NOT NULL DEFAULT 5,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Initialize settings if not exists
     INSERT OR IGNORE INTO settings (key, value) VALUES ('meeting_count', '0');
+    INSERT OR IGNORE INTO settings (key, value) VALUES ('inactive_days', '90');
+
+    -- Initialize point config with defaults
+    INSERT OR IGNORE INTO point_config (id, points_per_action, cooldown_minutes)
+    VALUES (1, 100, 5);
   `);
 
   console.log('✅ 데이터베이스 초기화 완료');
