@@ -1,7 +1,11 @@
-FROM node:lts-alpine3.23
+
+FROM node:lts-slim
 
 # Install build dependencies for better-sqlite3 and Chromium for puppeteer
-RUN apk add --no-cache python3 make g++ chromium
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 make g++ chromium \
+    && rm -rf /var/lib/apt/lists/*
+
 
 # Create app directory
 WORKDIR /app
@@ -11,7 +15,7 @@ COPY package*.json ./
 RUN npm ci --only=production
 
 # Remove build dependencies to reduce image size
-RUN apk del python3 make g++
+RUN apt-get purge -y python3 make g++ && apt-get autoremove -y
 
 # Copy source code
 COPY . .
@@ -20,8 +24,8 @@ COPY . .
 RUN mkdir -p /app/data
 
 # Run as non-root user for security
-RUN addgroup -g 1001 -S botuser && \
-    adduser -S botuser -u 1001 -G botuser && \
+RUN groupadd -g 1001 botuser && \
+    useradd -u 1001 -g botuser botuser && \
     chown -R botuser:botuser /app
 USER botuser
 
