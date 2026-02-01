@@ -152,6 +152,25 @@ class SqliteRepository {
       clearQuestionMessageId: this.db.prepare(`
         UPDATE questions SET message_id = NULL WHERE id = ?
       `),
+      clearPracticePlanMessageId: this.db.prepare(`
+        UPDATE personal_practice_plans SET message_id = NULL WHERE id = ?
+      `),
+      clearQuizPublishHistoryMessageId: this.db.prepare(`
+        UPDATE quiz_publish_history SET message_id = NULL WHERE id = ?
+      `),
+      getAllQuizPublishHistory: this.db.prepare(`
+        SELECT * FROM quiz_publish_history ORDER BY published_date DESC
+      `),
+      deleteActivityPointsByUserId: this.db.prepare(`
+        DELETE FROM activity_points WHERE user_id = ?
+      `),
+      deleteAccumulationLogsByUserId: this.db.prepare(`
+        DELETE FROM point_accumulation_log WHERE user_id = ?
+      `),
+      deleteOrphanQuizPublishHistory: this.db.prepare(`
+        DELETE FROM quiz_publish_history
+        WHERE question_id NOT IN (SELECT id FROM quiz_questions)
+      `),
 
       // Meeting Config
       getMeetingConfig: this.db.prepare(`
@@ -913,6 +932,61 @@ class SqliteRepository {
   removePersonalPracticeRecord(planId, checkDate) {
     const result = this.stmts.deletePersonalPracticeRecord.run(planId, checkDate);
     return result.changes > 0;
+  }
+
+  // ==================== Sync Operations ====================
+
+  /**
+   * Clear message ID for a practice plan
+   * @param {number} id - Plan ID
+   */
+  clearPracticePlanMessageId(id) {
+    this.stmts.clearPracticePlanMessageId.run(id);
+  }
+
+  /**
+   * Clear message ID for quiz publish history
+   * @param {number} id - Publish history ID
+   */
+  clearQuizPublishHistoryMessageId(id) {
+    this.stmts.clearQuizPublishHistoryMessageId.run(id);
+  }
+
+  /**
+   * Get all quiz publish history records
+   * @returns {Array} Array of publish history records
+   */
+  getAllQuizPublishHistory() {
+    return this.stmts.getAllQuizPublishHistory.all();
+  }
+
+  /**
+   * Delete all activity points for a user
+   * @param {string} userId - User ID
+   * @returns {number} Number of deleted records
+   */
+  deleteActivityPointsByUserId(userId) {
+    const result = this.stmts.deleteActivityPointsByUserId.run(userId);
+    return result.changes;
+  }
+
+  /**
+   * Delete all accumulation logs for a user
+   * @param {string} userId - User ID
+   * @returns {number} Number of deleted records
+   */
+  deleteAccumulationLogsByUserId(userId) {
+    const result = this.stmts.deleteAccumulationLogsByUserId.run(userId);
+    return result.changes;
+  }
+
+  /**
+   * Delete orphaned quiz publish history records (question_id not in quiz_questions)
+   * @returns {number} Number of deleted records
+   */
+  deleteOrphanQuizPublishHistory() {
+    const result = this.stmts.deleteOrphanQuizPublishHistory.run();
+    return result.changes;
   }
 }
 

@@ -37,7 +37,7 @@ const PARAM_MAP = {
   'inactive.configSaved': ['days'],
   'inactive.configDisplay': ['days'],
   // Sync command strings
-  'sync.complete': ['membersAdded', 'membersRemoved', 'attendeesRemoved', 'lectureMessagesCleaned', 'questionMessagesCleaned'],
+  'sync.complete': ['membersAdded', 'membersRemoved', 'lectureAttendeesRemoved', 'questionAttendeesRemoved', 'lectureMessagesCleaned', 'questionMessagesCleaned', 'practiceMessagesCleaned', 'quizMessagesCleaned', 'pointsRemoved', 'accumulationLogsRemoved', 'practicesRemoved', 'practiceRecordsRemoved', 'quizHistoryCleaned'],
   'sync.error': ['error'],
   // Point controller strings
   'point.myPoints': ['points'],
