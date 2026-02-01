@@ -23,11 +23,9 @@ class PersonalPracticeGraphRenderer {
     // Determine rendering mode based on month count
     const monthCount = monthGroups.length;
     let html;
-    let height;
 
     if (monthCount >= 7) {
       // Mode B: GitHub-style heatmap for plans >= 7 months
-      height = 200;
       html = this._generateHeatmapHTML({
         content,
         startDate,
@@ -38,8 +36,6 @@ class PersonalPracticeGraphRenderer {
       });
     } else {
       // Mode A: Calendar stamp for plans < 7 months
-      const monthRows = Math.ceil(monthGroups.length / 2);
-      height = 55 + monthRows * 270 + 40;
       html = this._generateHTML({
         content,
         startDate,
@@ -48,7 +44,6 @@ class PersonalPracticeGraphRenderer {
         checkSet,
         today,
         monthGroups,
-        height,
       });
     }
 
@@ -68,12 +63,19 @@ class PersonalPracticeGraphRenderer {
       });
 
       const page = await browser.newPage();
-      await page.setViewport({ width: 800, height });
+      await page.setViewport({ width: 800, height: 2000 });
       await page.setContent(html);
 
       // Wait for calendar to render
       await page.waitForSelector('#calendar', { timeout: 5000 });
       await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 500)));
+
+      // Measure actual rendered content height
+      const contentHeight = await page.evaluate(() => {
+        const el = document.getElementById('calendar');
+        return Math.ceil(el.getBoundingClientRect().height);
+      });
+      const height = contentHeight + 40;
 
       // Take screenshot
       const screenshot = await page.screenshot({
@@ -102,7 +104,7 @@ class PersonalPracticeGraphRenderer {
    * Generate HTML with calendar stamp grid and progress bar for rendering
    * @private
    */
-  _generateHTML({ content, startDate, endDate, allDates, checkSet, today, monthGroups, height }) {
+  _generateHTML({ content, startDate, endDate, allDates, checkSet, today, monthGroups }) {
     // Calculate progress stats
     const completedCount = allDates.filter((date) => checkSet.has(date)).length;
     const totalDays = allDates.length;
@@ -141,12 +143,9 @@ class PersonalPracticeGraphRenderer {
     }
     body {
       width: 800px;
-      height: ${height}px;
       background: white;
       font-family: 'Segoe UI', 'Malgun Gothic', Arial, sans-serif;
       padding: 20px;
-      display: flex;
-      flex-direction: column;
     }
     .title {
       font-size: 20px;
@@ -478,12 +477,9 @@ class PersonalPracticeGraphRenderer {
     }
     body {
       width: 800px;
-      height: 200px;
       background: white;
       font-family: 'Segoe UI', 'Malgun Gothic', Arial, sans-serif;
       padding: 15px;
-      display: flex;
-      flex-direction: column;
     }
     .title {
       font-size: 16px;
