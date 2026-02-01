@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, AttachmentBuilder } = require('discord.js');
 const container = require('../../../../core/di/container');
 
 module.exports = {
@@ -79,19 +79,41 @@ module.exports = {
         groups[cat].push(entry);
       }
 
-      const embed = new EmbedBuilder().setTitle('봇 문자열 목록').setColor(0x5865f2);
-
+      const lines = [];
       for (const [cat, items] of Object.entries(groups)) {
-        const lines = items.map((item) => {
-          const modified = item.isOverridden ? ' *수정됨*' : '';
+        lines.push(`[${cat}]`);
+        for (const item of items) {
+          const modified = item.isOverridden ? ' (modified)' : '';
           const params = item.params ? ` (${item.params.map((p) => `{${p}}`).join(', ')})` : '';
-          return `\`${item.key}\`${modified}${params}`;
-        });
-        embed.addFields({ name: cat, value: lines.join('\n') });
+          lines.push(`  ${item.key}${modified}${params}`);
+        }
+        lines.push('');
       }
 
+      const totalSize = lines.reduce((sum, l) => sum + l.length, 0);
+
       console.log(`[string/config] String list viewed (${entries.length} entries), requested by ${interaction.user.tag}`);
-      await interaction.reply({ embeds: [embed], ephemeral: true });
+
+      if (totalSize > 5000) {
+        const text = lines.join('\n');
+        const attachment = new AttachmentBuilder(Buffer.from(text, 'utf-8'), { name: 'string-list.txt' });
+        await interaction.reply({
+          content: `Total ${entries.length} strings registered. See attached file for full list.`,
+          files: [attachment],
+          ephemeral: true,
+        });
+      } else {
+        const embed = new EmbedBuilder().setTitle('봇 문자열 목록').setColor(0x5865f2);
+        for (const [cat, items] of Object.entries(groups)) {
+          const fieldLines = items.map((item) => {
+            const modified = item.isOverridden ? ' *수정됨*' : '';
+            const params = item.params ? ` (${item.params.map((p) => `{${p}}`).join(', ')})` : '';
+            return `\`${item.key}\`${modified}${params}`;
+          });
+          embed.addFields({ name: cat, value: fieldLines.join('\n') });
+        }
+        await interaction.reply({ embeds: [embed], ephemeral: true });
+      }
     } else if (subcommand === '수정') {
       const key = interaction.options.getString('키');
       const value = interaction.options.getString('값');
