@@ -27,15 +27,13 @@ jobs:
       - name: Run unit tests
         run: npm test
 
-
-  docker-build:
-    name: Docker Build Verification
+  shellcheck:
+    name: Shell Script Lint
     runs-on: ubuntu-latest
-    needs: test
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Verify Dockerfile builds successfully
-        run: docker build -t mettaton-bot:ci-test .
+      - name: Run ShellCheck
+        run: shellcheck scripts/*.sh
