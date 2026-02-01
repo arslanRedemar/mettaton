@@ -285,7 +285,7 @@ class SchedulerService {
 
     try {
       // Format quiz message
-      const strings = require('../../../presentation/interfaces/strings');
+      const strings = require('../../presentation/interfaces/strings');
       const optionsText = question.getOptions()
         .map((opt, idx) => strings.quiz.publishOption(idx + 1, opt))
         .join('\n');
@@ -340,7 +340,7 @@ class SchedulerService {
 
     try {
       // Format explanation message
-      const strings = require('../../../presentation/interfaces/strings');
+      const strings = require('../../presentation/interfaces/strings');
       const messageText = `${strings.quiz.explanationTitle(question.id)}\n${strings.quiz.explanationAnswer(question.answer)}\n\n${strings.quiz.explanationBody(question.explanation)}\n\n${strings.quiz.explanationStats(participants, correctRate)}\n${strings.quiz.explanationPoints(participants - correctCount, correctCount)}`;
 
       await channel.send(messageText);
