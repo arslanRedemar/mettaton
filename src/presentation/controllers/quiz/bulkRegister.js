@@ -11,7 +11,7 @@ module.exports = {
   async execute(interaction, _repository, _schedulerService, _pointService, quizService) {
     if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
       return interaction.reply({
-        content: strings.quiz.noPermission(),
+        content: strings.quiz.noPermission,
         ephemeral: true,
       });
     }
@@ -35,7 +35,7 @@ module.exports = {
       if (!Array.isArray(data) || data.length === 0) {
         console.log(`[quiz/bulk-register] Empty or invalid JSON by ${interaction.user.tag}`);
         return interaction.reply({
-          content: strings.quiz.bulkEmpty(),
+          content: strings.quiz.bulkEmpty,
           ephemeral: true,
         });
       }
@@ -44,6 +44,11 @@ module.exports = {
 
       const results = quizService.bulkRegisterQuestions(data, interaction.user.id);
 
+      if (results.errors.length > 0) {
+        results.errors.forEach(({ index, error }) => {
+          console.log(`[quiz/bulk-register] Item[${index}] failed: ${error}`);
+        });
+      }
       console.log(`[quiz/bulk-register] Bulk registration by ${interaction.user.tag}: success=${results.success}, failed=${results.failed}`);
       await interaction.editReply({
         content: strings.quiz.bulkSuccess(results.success, results.failed),
@@ -54,7 +59,7 @@ module.exports = {
 
       if (error instanceof SyntaxError) {
         return interaction.reply({
-          content: strings.quiz.bulkFormatError(),
+          content: strings.quiz.bulkFormatError,
           ephemeral: true,
         });
       }

@@ -10,7 +10,7 @@ module.exports = {
   async execute(interaction, _repository, _schedulerService, _pointService, quizService) {
     if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
       return interaction.reply({
-        content: strings.quiz.noPermission(),
+        content: strings.quiz.noPermission,
         ephemeral: true,
       });
     }
@@ -21,13 +21,13 @@ module.exports = {
       if (statistics.length === 0) {
         console.log(`[quiz/stats] No published questions, requested by ${interaction.user.tag}`);
         return interaction.reply({
-          content: strings.quiz.statsEmpty(),
+          content: strings.quiz.statsEmpty,
           ephemeral: true,
         });
       }
 
       // Build stats text
-      const lines = [strings.quiz.statsTitle(), ''];
+      const lines = [strings.quiz.statsTitle, ''];
       statistics.forEach(({ question, participants, correctRate }) => {
         lines.push(strings.quiz.statsItem(question.id, question.category, participants, correctRate));
       });

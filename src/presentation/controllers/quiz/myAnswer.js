@@ -15,14 +15,14 @@ module.exports = {
         if (!history) {
           console.log(`[quiz/my-answer] No quiz today, requested by ${interaction.user.tag}`);
           return interaction.reply({
-            content: strings.quiz.myAnswerNoQuiz(),
+            content: strings.quiz.myAnswerNoQuiz,
             ephemeral: true,
           });
         }
 
         console.log(`[quiz/my-answer] No answer yet for ${interaction.user.tag}`);
         return interaction.reply({
-          content: strings.quiz.myAnswerNone(),
+          content: strings.quiz.myAnswerNone,
           ephemeral: true,
         });
       }
@@ -39,7 +39,7 @@ module.exports = {
 
       console.log(`[quiz/my-answer] Answer retrieved for ${interaction.user.tag}: option ${answer.selectedOption}`);
       await interaction.reply({
-        content: `${strings.quiz.myAnswerTitle()}\n${strings.quiz.myAnswerInfo(answer.selectedOption, submittedAt)}`,
+        content: `${strings.quiz.myAnswerTitle}\n${strings.quiz.myAnswerInfo(answer.selectedOption, submittedAt)}`,
         ephemeral: true,
       });
     } catch (error) {

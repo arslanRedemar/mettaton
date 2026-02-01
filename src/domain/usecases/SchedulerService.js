@@ -285,7 +285,7 @@ class SchedulerService {
 
     try {
       // Format quiz message
-      const strings = require('../../../presentation/interfaces/strings');
+      const strings = require('../../presentation/interfaces/strings');
       const optionsText = question.getOptions()
         .map((opt, idx) => strings.quiz.publishOption(idx + 1, opt))
         .join('\n');
@@ -300,7 +300,9 @@ class SchedulerService {
 
       console.log(`[SchedulerService] Daily quiz #${question.id} published to channel ${quizConfig.quizChannelId}`);
     } catch (error) {
-      console.error(`[SchedulerService] DiscordAPIError: Failed to publish quiz #${question.id}:`, error);
+      // Rollback publish history on message send failure
+      this.quizService.repository.deletePublishHistory(history.id);
+      console.error(`[SchedulerService] Failed to publish quiz #${question.id}, rolled back publish history:`, error);
     }
   }
 
@@ -340,7 +342,7 @@ class SchedulerService {
 
     try {
       // Format explanation message
-      const strings = require('../../../presentation/interfaces/strings');
+      const strings = require('../../presentation/interfaces/strings');
       const messageText = `${strings.quiz.explanationTitle(question.id)}\n${strings.quiz.explanationAnswer(question.answer)}\n\n${strings.quiz.explanationBody(question.explanation)}\n\n${strings.quiz.explanationStats(participants, correctRate)}\n${strings.quiz.explanationPoints(participants - correctCount, correctCount)}`;
 
       await channel.send(messageText);

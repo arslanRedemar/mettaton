@@ -44,7 +44,7 @@ module.exports = {
   async execute(interaction, _repository, schedulerService, _pointService, quizService) {
     if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
       return interaction.reply({
-        content: strings.quiz.noPermission(),
+        content: strings.quiz.noPermission,
         ephemeral: true,
       });
     }
@@ -97,7 +97,7 @@ module.exports = {
       if (error.message === 'INVALID_TIME_FORMAT') {
         console.log(`[quiz/config/time] Invalid time format by ${interaction.user.tag}: quiz=${quizTime}, explanation=${explanationTime}`);
         return interaction.reply({
-          content: strings.quiz.configInvalidTime(),
+          content: strings.quiz.configInvalidTime,
           ephemeral: true,
         });
       }
@@ -127,7 +127,7 @@ module.exports = {
 
     console.log(`[quiz/config/enable] Quiz enabled by ${interaction.user.tag}`);
     await interaction.reply({
-      content: strings.quiz.configEnabled(),
+      content: strings.quiz.configEnabled,
       ephemeral: true,
     });
   },
@@ -142,7 +142,7 @@ module.exports = {
 
     console.log(`[quiz/config/disable] Quiz disabled by ${interaction.user.tag}`);
     await interaction.reply({
-      content: strings.quiz.configDisabled(),
+      content: strings.quiz.configDisabled,
       ephemeral: true,
     });
   },
