@@ -95,6 +95,106 @@ function initializeDatabase(dbPath) {
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS personal_practice_plans (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      content TEXT NOT NULL,
+      daily_goal INTEGER NOT NULL,
+      unit TEXT NOT NULL,
+      start_date TEXT NOT NULL,
+      end_date TEXT NOT NULL,
+      message_id TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS personal_practice_records (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      plan_id INTEGER NOT NULL,
+      user_id TEXT NOT NULL,
+      check_date TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (plan_id) REFERENCES personal_practice_plans(id) ON DELETE CASCADE,
+      UNIQUE(plan_id, check_date)
+    );
+
+    CREATE TABLE IF NOT EXISTS activity_type_config (
+      activity_type TEXT PRIMARY KEY,
+      points INTEGER NOT NULL,
+      cooldown_minutes INTEGER NOT NULL,
+      daily_cap INTEGER,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS point_accumulation_log (
+      user_id TEXT NOT NULL,
+      activity_type TEXT NOT NULL,
+      last_accumulated_at DATETIME NOT NULL,
+      daily_count INTEGER NOT NULL DEFAULT 0,
+      daily_date TEXT NOT NULL,
+      PRIMARY KEY (user_id, activity_type)
+    );
+
+    CREATE TABLE IF NOT EXISTS point_award_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      activity_type TEXT NOT NULL,
+      points_awarded INTEGER NOT NULL,
+      awarded_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS quiz_questions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      category TEXT NOT NULL,
+      question TEXT NOT NULL,
+      option_1 TEXT NOT NULL,
+      option_2 TEXT NOT NULL,
+      option_3 TEXT NOT NULL,
+      option_4 TEXT NOT NULL,
+      option_5 TEXT NOT NULL,
+      answer INTEGER NOT NULL,
+      explanation TEXT NOT NULL,
+      created_by TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS quiz_config (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      quiz_channel_id TEXT,
+      quiz_time TEXT DEFAULT '09:00',
+      explanation_time TEXT DEFAULT '21:00',
+      enabled INTEGER DEFAULT 1,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS quiz_categories (
+      name TEXT PRIMARY KEY,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS quiz_publish_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      question_id INTEGER NOT NULL,
+      published_date TEXT NOT NULL,
+      message_id TEXT,
+      explanation_revealed INTEGER DEFAULT 0,
+      published_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (question_id) REFERENCES quiz_questions(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS quiz_answers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      question_id INTEGER NOT NULL,
+      user_id TEXT NOT NULL,
+      selected_option INTEGER NOT NULL,
+      is_correct INTEGER NOT NULL,
+      points_awarded INTEGER DEFAULT 0,
+      submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME,
+      FOREIGN KEY (question_id) REFERENCES quiz_questions(id) ON DELETE CASCADE,
+      UNIQUE (question_id, user_id)
+    );
+
     -- Initialize settings if not exists
     INSERT OR IGNORE INTO settings (key, value) VALUES ('meeting_count', '0');
     INSERT OR IGNORE INTO settings (key, value) VALUES ('inactive_days', '90');
@@ -102,6 +202,21 @@ function initializeDatabase(dbPath) {
     -- Initialize point config with defaults
     INSERT OR IGNORE INTO point_config (id, points_per_action, cooldown_minutes)
     VALUES (1, 100, 5);
+
+    -- Initialize activity type configs with defaults
+    INSERT OR IGNORE INTO activity_type_config (activity_type, points, cooldown_minutes, daily_cap)
+    VALUES
+      ('FORUM_POST', 300, 5, NULL),
+      ('QUESTION_ANSWER', 300, 5, NULL),
+      ('MEETING_ATTEND', 250, 5, NULL),
+      ('PERSONAL_PRACTICE', 150, 1440, 1),
+      ('GENERAL', 50, 5, NULL),
+      ('QUIZ_PARTICIPATE', 150, 0, 1),
+      ('QUIZ_CORRECT', 200, 0, 1);
+
+    -- Initialize quiz config with defaults
+    INSERT OR IGNORE INTO quiz_config (id, quiz_time, explanation_time, enabled)
+    VALUES (1, '09:00', '21:00', 1);
   `);
 
   console.log('✅ 데이터베이스 초기화 완료');

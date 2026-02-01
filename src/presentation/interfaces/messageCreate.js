@@ -1,4 +1,5 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, ChannelType } = require('discord.js');
+const ActivityType = require('../../../core/types/ActivityType');
 const strings = require('./strings');
 
 module.exports = {
@@ -18,9 +19,20 @@ module.exports = {
     // Point accumulation (automatic, no notification)
     if (pointAccumulationService && message.guild) {
       try {
-        const result = pointAccumulationService.tryAccumulate(message.author.id);
+        let activityType = ActivityType.GENERAL;
+
+        // Forum post detection: thread in a GuildForum channel
+        if (
+          message.channel.type === ChannelType.PublicThread
+          && message.channel.parent
+          && message.channel.parent.type === ChannelType.GuildForum
+        ) {
+          activityType = ActivityType.FORUM_POST;
+        }
+
+        const result = pointAccumulationService.tryAccumulate(message.author.id, activityType);
         if (result) {
-          console.log(`[messageCreate] Points accumulated for ${message.author.tag} (${message.author.id}): +${result.pointsAdded} -> ${result.newPoints}`);
+          console.log(`[messageCreate] Points accumulated for ${message.author.tag} (${message.author.id}): +${result.pointsAdded} (${result.activityType}) -> ${result.newPoints}`);
         }
       } catch (error) {
         console.error(`[messageCreate] Point accumulation failed for ${message.author.tag} (${message.author.id}):`, error);

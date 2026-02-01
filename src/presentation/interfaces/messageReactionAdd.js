@@ -1,5 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
 const config = require('../../../core/config');
+const ActivityType = require('../../../core/types/ActivityType');
 const strings = require('./strings');
 
 module.exports = {
@@ -10,9 +11,9 @@ module.exports = {
     // Point accumulation for reactions (automatic, no notification)
     if (pointAccumulationService && reaction.message.guild) {
       try {
-        const result = pointAccumulationService.tryAccumulate(user.id);
+        const result = pointAccumulationService.tryAccumulate(user.id, ActivityType.GENERAL);
         if (result) {
-          console.log(`[messageReactionAdd] Points accumulated for ${user.tag} (${user.id}): +${result.pointsAdded} -> ${result.newPoints}`);
+          console.log(`[messageReactionAdd] Points accumulated for ${user.tag} (${user.id}): +${result.pointsAdded} (${result.activityType}) -> ${result.newPoints}`);
         }
       } catch (error) {
         console.error(`[messageReactionAdd] Point accumulation failed for ${user.tag} (${user.id}):`, error);
@@ -107,6 +108,82 @@ module.exports = {
         console.log(`[messageReactionAdd] Question #${question.id} attendee added: ${user.tag} (${user.id})`);
       } catch (error) {
         console.error(`[messageReactionAdd] Question #${question.id} reaction handling failed for ${user.tag} (${user.id}):`, error);
+      }
+    }
+
+    // Handle personal practice check-in
+    if (reaction.emoji.name === '✅') {
+      const practice = repository.getPersonalPracticePlanByMessageId(reaction.message.id);
+      if (!practice) return;
+
+      // Only the plan owner can check
+      if (practice.userId !== user.id) {
+        console.log(`[messageReactionAdd] Personal practice check denied: non-owner ${user.tag} tried to check plan #${practice.id}`);
+        return;
+      }
+
+      // Ignore if plan has ended
+      if (practice.hasEnded()) {
+        console.log(`[messageReactionAdd] Personal practice check denied: plan #${practice.id} has ended`);
+        return;
+      }
+
+      try {
+        const today = new Date().toISOString().split('T')[0];
+
+        // Check if today is within practice period
+        if (today < practice.startDate || today > practice.endDate) {
+          console.log(`[messageReactionAdd] Personal practice check denied: today ${today} is outside plan #${practice.id} period`);
+          return;
+        }
+
+        // Add check record (duplicate check prevented by UNIQUE constraint)
+        const added = repository.addPersonalPracticeRecord(practice.id, user.id, today);
+
+        if (added) {
+          // Award personal practice points
+          if (pointAccumulationService) {
+            try {
+              const pointResult = pointAccumulationService.tryAccumulate(user.id, ActivityType.PERSONAL_PRACTICE);
+              if (pointResult) {
+                console.log(`[messageReactionAdd] Personal practice points for ${user.tag} (${user.id}): +${pointResult.pointsAdded}`);
+              }
+            } catch (err) {
+              console.error(`[messageReactionAdd] Personal practice point error for ${user.tag} (${user.id}):`, err);
+            }
+          }
+
+          // Update embed with new progress
+          const checkDates = repository.getPersonalPracticeRecords(practice.id);
+          const completedCount = checkDates.length;
+          const totalDays = practice.getTotalDays();
+          const percentage = totalDays > 0 ? Math.round((completedCount / totalDays) * 100) : 0;
+
+          await reaction.message.edit({
+            embeds: [
+              new EmbedBuilder()
+                .setTitle(strings.personalPractice.embedTitle)
+                .setDescription(
+                  strings.personalPractice.embedDescription(
+                    `<@${practice.userId}>`,
+                    practice.content,
+                    practice.dailyGoal,
+                    practice.unit,
+                    practice.startDate,
+                    practice.endDate,
+                    completedCount,
+                    totalDays,
+                    percentage
+                  )
+                )
+                .setColor(0x4CAF50)
+                .setFooter({ text: strings.personalPractice.embedFooter }),
+            ],
+          });
+          console.log(`[messageReactionAdd] Personal practice #${practice.id} checked by ${user.tag} (${user.id}) for ${today}`);
+        }
+      } catch (error) {
+        console.error(`[messageReactionAdd] ${error.constructor.name}: Personal practice #${practice.id} check failed for ${user.tag} (${user.id}):`, error);
       }
     }
   },

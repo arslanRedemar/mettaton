@@ -10,9 +10,11 @@ const container = require('../core/di/container');
 const client = require('./data/datasource/discordClient');
 const { initializeDatabase, closeDatabase } = require('./data/datasource/database');
 const { SqliteRepository } = require('./data/repositories');
+const SqliteQuizRepository = require('./data/repositories/SqliteQuizRepository');
 
 // Domain Layer - Usecases
 const { SchedulerService, MoonCalendarService, StringService, PointAccumulationService } = require('./domain/usecases');
+const QuizService = require('./domain/usecases/QuizService');
 
 // Presentation Layer
 const commands = require('./presentation/controllers');
@@ -36,8 +38,14 @@ stringService.loadFromDatabase();
 container.register('stringService', stringService);
 
 const moonCalendarService = new MoonCalendarService(path.join(__dirname, '..', config.calendarDir));
-const schedulerService = new SchedulerService(client, repository);
 const pointAccumulationService = new PointAccumulationService(repository);
+
+// Initialize Quiz Repository and Service
+const quizRepository = new SqliteQuizRepository();
+quizRepository.init();
+const quizService = new QuizService(quizRepository, pointAccumulationService);
+
+const schedulerService = new SchedulerService(client, repository, pointAccumulationService, quizService);
 
 // Register slash commands
 async function registerCommands() {
@@ -67,7 +75,7 @@ function registerEvents() {
       client.on(event.name, async (...args) => {
         try {
           if (event.name === 'interactionCreate') {
-            await event.execute(...args, repository, schedulerService, pointAccumulationService);
+            await event.execute(...args, repository, schedulerService, pointAccumulationService, quizService);
           } else if (event.name === 'messageCreate') {
             await event.execute(...args, { moonCalendarService, repository, pointAccumulationService });
           } else if (event.name === 'messageDelete') {

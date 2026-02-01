@@ -85,9 +85,9 @@ describe('StringService', () => {
   });
 
   describe('getAllKeys()', () => {
-    it('should return all 90 default keys', () => {
+    it('should return all 110 default keys', () => {
       const keys = service.getAllKeys();
-      expect(keys.length).toBe(90);
+      expect(keys.length).toBe(110);
     });
 
     it('should mark overridden keys', () => {
