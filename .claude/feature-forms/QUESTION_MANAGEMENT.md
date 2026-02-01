@@ -70,6 +70,15 @@ Question Management (질문 관리)
 - 슬래시 명령어: 실행 채널 제한 없음
 - 질문 Embed 게시: 환경변수로 지정된 질문 채널 (config.channels.question)
 
+## Cross-Feature Integration
+
+### Activity Points (QUESTION_ANSWER)
+- `/질문답변` 명령어 실행 시 `QUESTION_ANSWER` 활동 포인트 자동 적립 (기본 300P)
+- `PointAccumulationService.tryAccumulate(userId, ActivityType.QUESTION_ANSWER)` 호출
+- question/answer.js 컨트롤러에서 답변 처리 후 트리거
+- 유형별 독립 쿨다운 적용 (기본 5분)
+- 상세 설정은 [ACTIVITY_POINTS.md](./ACTIVITY_POINTS.md) 참조
+
 ## Business Rules
 - 질문 등록 시 내용은 필수 입력
 - 등록된 질문은 지정된 질문 채널에 Embed 메시지로 게시

@@ -92,6 +92,52 @@ Your primary responsibility is to synchronize modifications made to feature form
    - Testing recommendations
    - Deployment considerations
 
+## Mandatory Logging Requirements
+
+Every feature implementation MUST include comprehensive logging for ALL execution paths. This is a non-negotiable requirement.
+
+### Logging Format
+All logs MUST follow the `[feature-name/action]` prefix convention:
+```
+console.log(`[personal-practice/register] Plan #${plan.id} registered by ${user.tag} (${user.id})`);
+console.error(`[personal-practice/view] ${error.constructor.name}: Graph generation failed for plan #${planId}:`, error);
+```
+
+### Required Coverage - Every Path Must Log
+
+**1. Success Paths (`console.log`)**:
+- Every command/action that completes successfully must log with user info and result details
+- Example: `[feature/action] Resource #${id} created by ${user.tag} (${user.id})`
+
+**2. Failure Paths (`console.error` with error type)**:
+- Every `catch` block must log with `error.constructor.name` or explicit error type prefix
+- Example: `[feature/action] ${error.constructor.name}: Failed to create resource:`, error
+- Discord API failures: prefix with `DiscordAPIError:`
+- Channel/resource not found: prefix with `ChannelNotFoundError:` or `NotFoundError:`
+
+**3. Validation Failures (`console.log`)**:
+- Input validation failures must log with the specific validation errors
+- Example: `[feature/register] Validation failed by ${user.tag}: ${errors.join(', ')}`
+
+**4. Permission/Restriction Denials (`console.log`)**:
+- Ownership checks, channel restrictions, permission denials
+- Example: `[feature/edit] Channel restriction: ${user.tag} tried to edit outside allowed channel`
+- Example: `[feature/delete] Access denied for ${user.tag} (owner: ${ownerId})`
+
+**5. Async Operations (Puppeteer, external APIs)**:
+- Log before starting: `[feature/graph] Launching Puppeteer for "${content}"`
+- Log on success: `[feature/graph] Graph rendered successfully for "${content}"`
+- Log on failure with error type: `[feature/graph] ${error.constructor.name}: Failed to render graph`
+
+### Checklist Before Completion
+For each controller method and event handler, verify:
+- [ ] Happy path has a success log
+- [ ] Every `catch` block has an error log with error type
+- [ ] Every early return (validation, permission, not found) has a log
+- [ ] `try-catch` wraps all Discord API calls (`channel.send`, `msg.edit`, `msg.delete`, `msg.react`)
+- [ ] `try-catch` wraps all external operations (Puppeteer, HTTP calls)
+- [ ] Autocomplete handlers have error handling with logging
+
 ## Quality Assurance
 
 - **Type Safety**: Ensure all TypeScript types in `core/types/` are updated to reflect changes

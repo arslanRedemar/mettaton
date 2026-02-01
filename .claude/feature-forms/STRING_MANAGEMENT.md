@@ -59,7 +59,7 @@ String Management (문자열 설정)
 
 ## Business Rules
 - 110개 이상의 기본 문자열이 StringService에 등록
-- 문자열 카테고리: ready, guildMemberAdd, interactionCreate, messageCreate, messageDelete, lecture, question, meeting, inactive, sync
+- 문자열 카테고리: ready, guildMemberAdd, interactionCreate, messageCreate, messageDelete, lecture, question, meeting, inactive, sync, point, personalPractice
 - DB 오버라이드 방식: DB에 값이 있으면 우선 사용, 없으면 기본값 fallback
 - 수정 시 autocomplete 지원 (키 검색, 수정된 키 표시)
 - 수정 시 필수 템플릿 변수({param}) 누락 검증

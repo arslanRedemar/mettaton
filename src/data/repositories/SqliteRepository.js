@@ -1,5 +1,12 @@
 const { getDatabase } = require('../datasource/database');
-const { LectureMapper, QuestionMapper, ActivityPointMapper } = require('../mappers');
+const {
+  LectureMapper,
+  QuestionMapper,
+  ActivityPointMapper,
+  PersonalPracticeMapper,
+  ActivityTypeConfigMapper,
+  PointAccumulationLogMapper,
+} = require('../mappers');
 
 /**
  * SQLite Repository 구현체
@@ -145,6 +152,25 @@ class SqliteRepository {
       clearQuestionMessageId: this.db.prepare(`
         UPDATE questions SET message_id = NULL WHERE id = ?
       `),
+      clearPracticePlanMessageId: this.db.prepare(`
+        UPDATE personal_practice_plans SET message_id = NULL WHERE id = ?
+      `),
+      clearQuizPublishHistoryMessageId: this.db.prepare(`
+        UPDATE quiz_publish_history SET message_id = NULL WHERE id = ?
+      `),
+      getAllQuizPublishHistory: this.db.prepare(`
+        SELECT * FROM quiz_publish_history ORDER BY published_date DESC
+      `),
+      deleteActivityPointsByUserId: this.db.prepare(`
+        DELETE FROM activity_points WHERE user_id = ?
+      `),
+      deleteAccumulationLogsByUserId: this.db.prepare(`
+        DELETE FROM point_accumulation_log WHERE user_id = ?
+      `),
+      deleteOrphanQuizPublishHistory: this.db.prepare(`
+        DELETE FROM quiz_publish_history
+        WHERE question_id NOT IN (SELECT id FROM quiz_questions)
+      `),
 
       // Meeting Config
       getMeetingConfig: this.db.prepare(`
@@ -198,6 +224,111 @@ class SqliteRepository {
           points_per_action = @pointsPerAction,
           cooldown_minutes = @cooldownMinutes,
           updated_at = CURRENT_TIMESTAMP
+      `),
+
+      // Personal Practice Plans
+      getAllPersonalPracticePlans: this.db.prepare(`
+        SELECT * FROM personal_practice_plans ORDER BY created_at DESC
+      `),
+      getPersonalPracticePlanById: this.db.prepare(`
+        SELECT * FROM personal_practice_plans WHERE id = ?
+      `),
+      getPersonalPracticePlanByMessageId: this.db.prepare(`
+        SELECT * FROM personal_practice_plans WHERE message_id = ?
+      `),
+      getPersonalPracticePlansByUserId: this.db.prepare(`
+        SELECT * FROM personal_practice_plans WHERE user_id = ? ORDER BY created_at DESC
+      `),
+      insertPersonalPracticePlan: this.db.prepare(`
+        INSERT INTO personal_practice_plans (user_id, content, daily_goal, unit, start_date, end_date, message_id)
+        VALUES (@userId, @content, @dailyGoal, @unit, @startDate, @endDate, @messageId)
+      `),
+      updatePersonalPracticePlan: this.db.prepare(`
+        UPDATE personal_practice_plans
+        SET content = @content, daily_goal = @dailyGoal, unit = @unit,
+            end_date = @endDate, message_id = @messageId
+        WHERE id = @id
+      `),
+      deletePersonalPracticePlan: this.db.prepare(`
+        DELETE FROM personal_practice_plans WHERE id = ?
+      `),
+
+      // Personal Practice Records
+      getPersonalPracticeRecordsByPlanId: this.db.prepare(`
+        SELECT * FROM personal_practice_records WHERE plan_id = ? ORDER BY check_date
+      `),
+      getPersonalPracticeRecord: this.db.prepare(`
+        SELECT * FROM personal_practice_records WHERE plan_id = ? AND check_date = ?
+      `),
+      insertPersonalPracticeRecord: this.db.prepare(`
+        INSERT OR IGNORE INTO personal_practice_records (plan_id, user_id, check_date)
+        VALUES (?, ?, ?)
+      `),
+      deletePersonalPracticeRecord: this.db.prepare(`
+        DELETE FROM personal_practice_records WHERE plan_id = ? AND check_date = ?
+      `),
+
+      // Activity Type Config
+      getActivityTypeConfig: this.db.prepare(`
+        SELECT * FROM activity_type_config WHERE activity_type = ?
+      `),
+      getAllActivityTypeConfigs: this.db.prepare(`
+        SELECT * FROM activity_type_config ORDER BY activity_type
+      `),
+      upsertActivityTypeConfig: this.db.prepare(`
+        INSERT INTO activity_type_config (activity_type, points, cooldown_minutes, daily_cap, enabled, updated_at)
+        VALUES (@activityType, @points, @cooldownMinutes, @dailyCap, @enabled, CURRENT_TIMESTAMP)
+        ON CONFLICT(activity_type) DO UPDATE SET
+          points = @points,
+          cooldown_minutes = @cooldownMinutes,
+          daily_cap = @dailyCap,
+          enabled = @enabled,
+          updated_at = CURRENT_TIMESTAMP
+      `),
+
+      // Point Accumulation Log
+      getAccumulationLog: this.db.prepare(`
+        SELECT * FROM point_accumulation_log WHERE user_id = ? AND activity_type = ?
+      `),
+      upsertAccumulationLog: this.db.prepare(`
+        INSERT INTO point_accumulation_log (user_id, activity_type, last_accumulated_at, daily_count, daily_date)
+        VALUES (@userId, @activityType, @lastAccumulatedAt, @dailyCount, @dailyDate)
+        ON CONFLICT(user_id, activity_type) DO UPDATE SET
+          last_accumulated_at = @lastAccumulatedAt,
+          daily_count = @dailyCount,
+          daily_date = @dailyDate
+      `),
+      resetUserAccumulationLogs: this.db.prepare(`
+        DELETE FROM point_accumulation_log WHERE user_id = ?
+      `),
+      resetAllAccumulationLogs: this.db.prepare(`
+        DELETE FROM point_accumulation_log
+      `),
+
+      // Point Award History
+      insertPointAwardHistory: this.db.prepare(`
+        INSERT INTO point_award_history (user_id, activity_type, points_awarded, awarded_at)
+        VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+      `),
+      getPointAwardHistoryByUser: this.db.prepare(`
+        SELECT activity_type, SUM(points_awarded) as total_points
+        FROM point_award_history
+        WHERE user_id = ?
+        GROUP BY activity_type
+      `),
+      getPointAwardHistoryByUserAndDateRange: this.db.prepare(`
+        SELECT activity_type, SUM(points_awarded) as total_points
+        FROM point_award_history
+        WHERE user_id = ?
+          AND DATE(awarded_at) >= DATE(?)
+          AND DATE(awarded_at) <= DATE(?)
+        GROUP BY activity_type
+      `),
+      resetUserPointAwardHistory: this.db.prepare(`
+        DELETE FROM point_award_history WHERE user_id = ?
+      `),
+      resetAllPointAwardHistory: this.db.prepare(`
+        DELETE FROM point_award_history
       `),
     };
   }
@@ -554,6 +685,308 @@ class SqliteRepository {
       cooldownMinutes,
     });
     return true;
+  }
+
+  // ==================== Activity Type Config Operations ====================
+
+  /**
+   * Get configuration for a specific activity type
+   * @param {string} activityType - Activity type key
+   * @returns {ActivityTypeConfig|null}
+   */
+  getActivityTypeConfig(activityType) {
+    const row = this.stmts.getActivityTypeConfig.get(activityType);
+    return ActivityTypeConfigMapper.toEntity(row);
+  }
+
+  /**
+   * Get all activity type configurations
+   * @returns {ActivityTypeConfig[]}
+   */
+  getAllActivityTypeConfigs() {
+    const rows = this.stmts.getAllActivityTypeConfigs.all();
+    return rows.map((row) => ActivityTypeConfigMapper.toEntity(row));
+  }
+
+  /**
+   * Create or update activity type configuration
+   * @param {ActivityTypeConfig} config
+   * @returns {boolean}
+   */
+  setActivityTypeConfig(config) {
+    const params = ActivityTypeConfigMapper.toDbParams(config);
+    this.stmts.upsertActivityTypeConfig.run(params);
+    return true;
+  }
+
+  // ==================== Point Accumulation Log Operations ====================
+
+  /**
+   * Get accumulation log for a user and activity type
+   * @param {string} userId - Discord user ID
+   * @param {string} activityType - Activity type key
+   * @returns {PointAccumulationLog|null}
+   */
+  getAccumulationLog(userId, activityType) {
+    const row = this.stmts.getAccumulationLog.get(userId, activityType);
+    return PointAccumulationLogMapper.toEntity(row);
+  }
+
+  /**
+   * Create or update accumulation log
+   * @param {PointAccumulationLog} log
+   * @returns {PointAccumulationLog}
+   */
+  upsertAccumulationLog(log) {
+    const params = PointAccumulationLogMapper.toDbParams(log);
+    this.stmts.upsertAccumulationLog.run(params);
+    return log;
+  }
+
+  /**
+   * Reset accumulation logs for a specific user
+   * @param {string} userId - Discord user ID
+   */
+  resetUserAccumulationLogs(userId) {
+    this.stmts.resetUserAccumulationLogs.run(userId);
+  }
+
+  /**
+   * Reset all accumulation logs
+   */
+  resetAllAccumulationLogs() {
+    this.stmts.resetAllAccumulationLogs.run();
+  }
+
+  // ==================== Point Award History Operations ====================
+
+  /**
+   * Insert a point award history record
+   * @param {string} userId - Discord user ID
+   * @param {string} activityType - Activity type key
+   * @param {number} pointsAwarded - Points awarded
+   * @returns {boolean}
+   */
+  insertPointAwardHistory(userId, activityType, pointsAwarded) {
+    const result = this.stmts.insertPointAwardHistory.run(userId, activityType, pointsAwarded);
+    return result.changes > 0;
+  }
+
+  /**
+   * Get aggregated point award history for a user
+   * @param {string} userId - Discord user ID
+   * @param {string} [startDate] - Start date (YYYY-MM-DD), optional
+   * @param {string} [endDate] - End date (YYYY-MM-DD), optional
+   * @returns {Array<{activityType: string, totalPoints: number}>}
+   */
+  getPointAwardHistory(userId, startDate, endDate) {
+    let rows;
+    if (startDate && endDate) {
+      rows = this.stmts.getPointAwardHistoryByUserAndDateRange.all(userId, startDate, endDate);
+    } else {
+      rows = this.stmts.getPointAwardHistoryByUser.all(userId);
+    }
+
+    return rows.map((row) => ({
+      activityType: row.activity_type,
+      totalPoints: row.total_points,
+    }));
+  }
+
+  /**
+   * Reset point award history for a specific user
+   * @param {string} userId - Discord user ID
+   * @returns {boolean}
+   */
+  resetUserPointAwardHistory(userId) {
+    const result = this.stmts.resetUserPointAwardHistory.run(userId);
+    return result.changes > 0;
+  }
+
+  /**
+   * Reset all point award history
+   * @returns {boolean}
+   */
+  resetAllPointAwardHistory() {
+    const result = this.stmts.resetAllPointAwardHistory.run();
+    return result.changes > 0;
+  }
+
+  // ==================== Personal Practice Operations ====================
+
+  /**
+   * Get all personal practice plans
+   * @returns {PersonalPractice[]}
+   */
+  getAllPersonalPracticePlans() {
+    const rows = this.stmts.getAllPersonalPracticePlans.all();
+    return rows.map((row) => PersonalPracticeMapper.toEntity(row));
+  }
+
+  /**
+   * Get personal practice plan by ID
+   * @param {number} id - Plan ID
+   * @returns {PersonalPractice|null}
+   */
+  getPersonalPracticePlanById(id) {
+    const row = this.stmts.getPersonalPracticePlanById.get(id);
+    return PersonalPracticeMapper.toEntity(row);
+  }
+
+  /**
+   * Get personal practice plan by message ID
+   * @param {string} messageId - Discord message ID
+   * @returns {PersonalPractice|null}
+   */
+  getPersonalPracticePlanByMessageId(messageId) {
+    const row = this.stmts.getPersonalPracticePlanByMessageId.get(messageId);
+    return PersonalPracticeMapper.toEntity(row);
+  }
+
+  /**
+   * Get all personal practice plans for a user
+   * @param {string} userId - Discord user ID
+   * @returns {PersonalPractice[]}
+   */
+  getPersonalPracticePlansByUserId(userId) {
+    const rows = this.stmts.getPersonalPracticePlansByUserId.all(userId);
+    return rows.map((row) => PersonalPracticeMapper.toEntity(row));
+  }
+
+  /**
+   * Create a new personal practice plan
+   * @param {PersonalPractice} plan - Practice plan entity
+   * @returns {PersonalPractice}
+   */
+  addPersonalPracticePlan(plan) {
+    const params = PersonalPracticeMapper.toDbParams(plan);
+    const result = this.stmts.insertPersonalPracticePlan.run(params);
+    plan.id = result.lastInsertRowid;
+    return plan;
+  }
+
+  /**
+   * Update personal practice plan
+   * @param {PersonalPractice} plan - Practice plan entity
+   * @returns {boolean}
+   */
+  updatePersonalPracticePlan(plan) {
+    const params = PersonalPracticeMapper.toDbParams(plan);
+    this.stmts.updatePersonalPracticePlan.run(params);
+    return true;
+  }
+
+  /**
+   * Delete personal practice plan
+   * @param {number} id - Plan ID
+   * @returns {PersonalPractice|null}
+   */
+  deletePersonalPracticePlan(id) {
+    const plan = this.getPersonalPracticePlanById(id);
+    if (plan) {
+      this.stmts.deletePersonalPracticePlan.run(id);
+      return plan;
+    }
+    return null;
+  }
+
+  /**
+   * Get all check records for a practice plan
+   * @param {number} planId - Plan ID
+   * @returns {string[]} Array of check dates (YYYY-MM-DD)
+   */
+  getPersonalPracticeRecords(planId) {
+    const rows = this.stmts.getPersonalPracticeRecordsByPlanId.all(planId);
+    return rows.map((row) => row.check_date);
+  }
+
+  /**
+   * Check if a specific date is checked for a plan
+   * @param {number} planId - Plan ID
+   * @param {string} checkDate - Date to check (YYYY-MM-DD)
+   * @returns {boolean}
+   */
+  hasPersonalPracticeRecord(planId, checkDate) {
+    const row = this.stmts.getPersonalPracticeRecord.get(planId, checkDate);
+    return !!row;
+  }
+
+  /**
+   * Add a check record for a practice plan
+   * @param {number} planId - Plan ID
+   * @param {string} userId - User ID
+   * @param {string} checkDate - Date to check (YYYY-MM-DD)
+   * @returns {boolean}
+   */
+  addPersonalPracticeRecord(planId, userId, checkDate) {
+    const result = this.stmts.insertPersonalPracticeRecord.run(planId, userId, checkDate);
+    return result.changes > 0;
+  }
+
+  /**
+   * Remove a check record for a practice plan
+   * @param {number} planId - Plan ID
+   * @param {string} checkDate - Date to uncheck (YYYY-MM-DD)
+   * @returns {boolean}
+   */
+  removePersonalPracticeRecord(planId, checkDate) {
+    const result = this.stmts.deletePersonalPracticeRecord.run(planId, checkDate);
+    return result.changes > 0;
+  }
+
+  // ==================== Sync Operations ====================
+
+  /**
+   * Clear message ID for a practice plan
+   * @param {number} id - Plan ID
+   */
+  clearPracticePlanMessageId(id) {
+    this.stmts.clearPracticePlanMessageId.run(id);
+  }
+
+  /**
+   * Clear message ID for quiz publish history
+   * @param {number} id - Publish history ID
+   */
+  clearQuizPublishHistoryMessageId(id) {
+    this.stmts.clearQuizPublishHistoryMessageId.run(id);
+  }
+
+  /**
+   * Get all quiz publish history records
+   * @returns {Array} Array of publish history records
+   */
+  getAllQuizPublishHistory() {
+    return this.stmts.getAllQuizPublishHistory.all();
+  }
+
+  /**
+   * Delete all activity points for a user
+   * @param {string} userId - User ID
+   * @returns {number} Number of deleted records
+   */
+  deleteActivityPointsByUserId(userId) {
+    const result = this.stmts.deleteActivityPointsByUserId.run(userId);
+    return result.changes;
+  }
+
+  /**
+   * Delete all accumulation logs for a user
+   * @param {string} userId - User ID
+   * @returns {number} Number of deleted records
+   */
+  deleteAccumulationLogsByUserId(userId) {
+    const result = this.stmts.deleteAccumulationLogsByUserId.run(userId);
+    return result.changes;
+  }
+
+  /**
+   * Delete orphaned quiz publish history records (question_id not in quiz_questions)
+   * @returns {number} Number of deleted records
+   */
+  deleteOrphanQuizPublishHistory() {
+    const result = this.stmts.deleteOrphanQuizPublishHistory.run();
+    return result.changes;
   }
 }
 

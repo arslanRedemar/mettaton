@@ -1,7 +1,9 @@
 #!/bin/bash
 
-# 수동 시작 스크립트
-cd /home/pi/mettaton
-docker compose up -d --build
-echo "Mettaton bot started!"
-docker logs -f mettaton-bot
+# Mettaton Discord Bot - Manual Start Script
+
+PROJECT_DIR="/home/pi/mettaton"
+
+echo "Starting Mettaton bot..."
+cd "$PROJECT_DIR"
+node src/index.js

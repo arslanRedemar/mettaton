@@ -64,6 +64,15 @@ Meeting Scheduler (수행 모임 스케줄러)
 - 슬래시 명령어: 실행 채널 제한 없음 (ephemeral 응답)
 - 모임 알림 게시: 관리자가 설정한 알림 채널 (channelId)
 
+## Cross-Feature Integration
+
+### Activity Points (MEETING_ATTEND)
+- ✅ 리액션으로 참석 표시 시 `MEETING_ATTEND` 활동 포인트 자동 적립 (기본 250P)
+- `PointAccumulationService.tryAccumulate(userId, ActivityType.MEETING_ATTEND)` 호출
+- SchedulerService의 리액션 수집기(ReactionCollector) 내에서 트리거
+- 유형별 독립 쿨다운 적용 (기본 5분)
+- 상세 설정은 [ACTIVITY_POINTS.md](./ACTIVITY_POINTS.md) 참조
+
 ## Business Rules
 - node-schedule 라이브러리로 cron job 스케줄링
 - 타임존: Asia/Seoul (한국 시간)

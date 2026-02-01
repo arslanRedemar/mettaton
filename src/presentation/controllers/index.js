@@ -18,8 +18,22 @@ const inactiveConfigView = require('./inactive/configView');
 const syncSync = require('./sync/sync');
 
 const pointMyPoints = require('./point/myPoints');
+const pointHistory = require('./point/history');
 const pointRanking = require('./point/ranking');
 const pointConfig = require('./point/config');
+
+const personalPractice = require('./personal-practice');
+
+const quizRegister = require('./quiz');
+const quizBulkRegister = require('./quiz/bulkRegister');
+const quizList = require('./quiz/list');
+const quizStats = require('./quiz/stats');
+const quizStatus = require('./quiz/status');
+const quizConfig = require('./quiz/config');
+const quizDelete = require('./quiz/delete');
+const quizReset = require('./quiz/reset');
+const quizAnswer = require('./quiz/answer');
+const quizMyAnswer = require('./quiz/myAnswer');
 
 const commands = [
   scheduleRegister,
@@ -37,8 +51,20 @@ const commands = [
   inactiveConfigView,
   syncSync,
   pointMyPoints,
+  pointHistory,
   pointRanking,
   pointConfig,
+  personalPractice,
+  quizRegister,
+  quizBulkRegister,
+  quizList,
+  quizStats,
+  quizStatus,
+  quizConfig,
+  quizDelete,
+  quizReset,
+  quizAnswer,
+  quizMyAnswer,
 ];
 
 module.exports = commands;

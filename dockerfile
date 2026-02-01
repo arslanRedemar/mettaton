@@ -19,9 +19,10 @@ RUN npm ci --only=production
 # ============================================================
 FROM node:20-slim
 
-# Chromium for puppeteer-core (separate layer, largest download)
+# Chromium + Korean fonts for puppeteer-core
 RUN apt-get update && apt-get install -y --no-install-recommends \
     chromium \
+    fonts-noto-cjk \
     && rm -rf /var/lib/apt/lists/*
 
 # gosu for entrypoint privilege drop (separate layer, small)
@@ -48,7 +49,7 @@ RUN chown -R node:node /app
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-ENV CHROMIUM_PATH=/usr/bin/chromium
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 # Entrypoint fixes data dir permissions then drops to node user via gosu
 ENTRYPOINT ["/entrypoint.sh"]
