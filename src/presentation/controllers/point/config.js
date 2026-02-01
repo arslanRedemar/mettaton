@@ -60,6 +60,38 @@ module.exports = {
             .setRequired(false)
         )
     )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName('활동설정')
+        .setDescription('활동 유형별 포인트 설정')
+        .addStringOption((option) =>
+          option
+            .setName('유형')
+            .setDescription('활동 유형')
+            .setRequired(true)
+            .addChoices(
+              { name: '포럼 글쓰기', value: 'FORUM_POST' },
+              { name: '질문 답변', value: 'QUESTION_ANSWER' },
+              { name: '수행모임 참여', value: 'MEETING_ATTEND' },
+              { name: '개인수행', value: 'PERSONAL_PRACTICE' },
+              { name: '일반활동', value: 'GENERAL' },
+            )
+        )
+        .addIntegerOption((option) =>
+          option.setName('포인트').setDescription('적립 포인트').setMinValue(0).setMaxValue(10000).setRequired(true)
+        )
+        .addIntegerOption((option) =>
+          option.setName('쿨다운').setDescription('쿨다운(분)').setMinValue(1).setMaxValue(1440).setRequired(true)
+        )
+        .addIntegerOption((option) =>
+          option.setName('일일한도').setDescription('일일 한도 (0=무제한)').setMinValue(0).setMaxValue(100).setRequired(false)
+        )
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName('활동확인')
+        .setDescription('활동 유형별 포인트 설정 확인')
+    )
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction, _repository, _schedulerService, pointAccumulationService) {
@@ -101,6 +133,54 @@ module.exports = {
       console.log(`[point/config] Config viewed by ${interaction.user.tag}`);
       await interaction.reply({
         content: strings.point.configDisplay(config.pointsPerAction, config.cooldownMinutes),
+        ephemeral: true,
+      });
+    } else if (subcommand === '활동설정') {
+      const type = interaction.options.getString('유형');
+      const points = interaction.options.getInteger('포인트');
+      const cooldown = interaction.options.getInteger('쿨다운');
+      const dailyCapInput = interaction.options.getInteger('일일한도');
+      const dailyCap = dailyCapInput === 0 || dailyCapInput === null ? null : dailyCapInput;
+
+      pointAccumulationService.setActivityTypeConfig(type, points, cooldown, dailyCap, true);
+
+      const ACTIVITY_TYPE_LABELS = {
+        FORUM_POST: '포럼 글쓰기',
+        QUESTION_ANSWER: '질문 답변',
+        MEETING_ATTEND: '수행모임 참여',
+        PERSONAL_PRACTICE: '개인수행',
+        GENERAL: '일반활동',
+      };
+
+      const label = ACTIVITY_TYPE_LABELS[type] || type;
+      const capText = dailyCap ? ` | 일일한도: ${dailyCap}회` : '';
+
+      console.log(`[point/config] Activity type config updated by ${interaction.user.tag}: ${type} = ${points}pts, ${cooldown}min CD, cap=${dailyCap}`);
+      await interaction.reply({
+        content: `✅ **${label}** 설정 완료\n포인트: ${points} | 쿨다운: ${cooldown}분${capText}`,
+        ephemeral: true,
+      });
+    } else if (subcommand === '활동확인') {
+      const configs = pointAccumulationService.getAllActivityTypeConfigs();
+
+      const ACTIVITY_TYPE_LABELS = {
+        FORUM_POST: '포럼 글쓰기',
+        QUESTION_ANSWER: '질문 답변',
+        MEETING_ATTEND: '수행모임 참여',
+        PERSONAL_PRACTICE: '개인수행',
+        GENERAL: '일반활동',
+      };
+
+      const lines = configs.map((c) => {
+        const label = ACTIVITY_TYPE_LABELS[c.activityType] || c.activityType;
+        const capText = c.dailyCap ? ` | 일일한도: ${c.dailyCap}회` : '';
+        const status = c.enabled ? '✅' : '❌';
+        return `${status} **${label}**: ${c.points}pts | 쿨다운: ${c.cooldownMinutes}분${capText}`;
+      });
+
+      console.log(`[point/config] Activity type configs viewed by ${interaction.user.tag}`);
+      await interaction.reply({
+        content: `📋 **활동 유형별 포인트 설정**\n${lines.join('\n')}`,
         ephemeral: true,
       });
     } else if (subcommand === '초기화') {

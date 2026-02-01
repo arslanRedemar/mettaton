@@ -98,5 +98,63 @@ module.exports = {
         console.error(`[messageReactionRemove] Question #${question.id} reaction handling failed for ${user.tag} (${user.id}):`, error);
       }
     }
+
+    // Handle personal practice check-in removal
+    if (reaction.emoji.name === '✅') {
+      const practice = repository.getPersonalPracticePlanByMessageId(reaction.message.id);
+      if (!practice) return;
+
+      // Only the plan owner can uncheck
+      if (practice.userId !== user.id) {
+        console.log(`[messageReactionRemove] Personal practice uncheck denied: non-owner ${user.tag} tried to uncheck plan #${practice.id}`);
+        return;
+      }
+
+      // Ignore if plan has ended
+      if (practice.hasEnded()) {
+        console.log(`[messageReactionRemove] Personal practice uncheck denied: plan #${practice.id} has ended`);
+        return;
+      }
+
+      try {
+        const today = new Date().toISOString().split('T')[0];
+
+        // Remove check record
+        const removed = repository.removePersonalPracticeRecord(practice.id, today);
+
+        if (removed) {
+          // Update embed with new progress
+          const checkDates = repository.getPersonalPracticeRecords(practice.id);
+          const completedCount = checkDates.length;
+          const totalDays = practice.getTotalDays();
+          const percentage = totalDays > 0 ? Math.round((completedCount / totalDays) * 100) : 0;
+
+          await reaction.message.edit({
+            embeds: [
+              new EmbedBuilder()
+                .setTitle(strings.personalPractice.embedTitle)
+                .setDescription(
+                  strings.personalPractice.embedDescription(
+                    `<@${practice.userId}>`,
+                    practice.content,
+                    practice.dailyGoal,
+                    practice.unit,
+                    practice.startDate,
+                    practice.endDate,
+                    completedCount,
+                    totalDays,
+                    percentage
+                  )
+                )
+                .setColor(0x4CAF50)
+                .setFooter({ text: strings.personalPractice.embedFooter }),
+            ],
+          });
+          console.log(`[messageReactionRemove] Personal practice #${practice.id} unchecked by ${user.tag} (${user.id}) for ${today}`);
+        }
+      } catch (error) {
+        console.error(`[messageReactionRemove] ${error.constructor.name}: Personal practice #${practice.id} uncheck failed for ${user.tag} (${user.id}):`, error);
+      }
+    }
   },
 };

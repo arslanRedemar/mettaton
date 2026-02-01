@@ -1,8 +1,10 @@
 const ActivityPoint = require('../entities/ActivityPoint');
+const PointAccumulationLog = require('../entities/PointAccumulationLog');
+const ActivityTypeConfig = require('../entities/ActivityTypeConfig');
 
 /**
  * Point Accumulation Service
- * Handles automatic point accumulation with cooldown logic
+ * Handles activity-type-aware point accumulation with per-type cooldowns and daily caps
  */
 class PointAccumulationService {
   /**
@@ -15,34 +17,51 @@ class PointAccumulationService {
   /**
    * Try to accumulate points for a user activity
    * @param {string} userId - Discord user ID
-   * @returns {Object|null} - {accumulated: boolean, newPoints: number, message: string} or null if cooldown active
+   * @param {string} activityType - Activity type key (e.g. 'GENERAL', 'FORUM_POST')
+   * @returns {Object|null} - {accumulated, newPoints, pointsAdded, activityType} or null if blocked
    */
-  tryAccumulate(userId) {
+  tryAccumulate(userId, activityType) {
     try {
-      const config = this.repository.getPointConfig();
-      const pointsPerAction = config?.pointsPerAction || 100;
-      const cooldownMinutes = config?.cooldownMinutes || 5;
+      const typeConfig = this.repository.getActivityTypeConfig(activityType);
+      if (!typeConfig || !typeConfig.enabled) {
+        return null;
+      }
+
+      let log = this.repository.getAccumulationLog(userId, activityType);
+      if (!log) {
+        log = new PointAccumulationLog({ userId, activityType });
+      }
+
+      if (!log.canAccumulate(typeConfig.cooldownMinutes)) {
+        return null;
+      }
+
+      if (log.isDailyCapReached(typeConfig.dailyCap)) {
+        return null;
+      }
 
       let activityPoint = this.repository.getActivityPoint(userId);
-
       if (!activityPoint) {
         activityPoint = new ActivityPoint({ userId, points: 0 });
       }
 
-      if (!activityPoint.canAccumulate(cooldownMinutes)) {
-        return null;
-      }
-
-      activityPoint.addPoints(pointsPerAction);
+      activityPoint.addPoints(typeConfig.points);
       this.repository.upsertActivityPoint(activityPoint);
+
+      log.recordAccumulation();
+      this.repository.upsertAccumulationLog(log);
+
+      // Record award history
+      this.repository.insertPointAwardHistory(userId, activityType, typeConfig.points);
 
       return {
         accumulated: true,
         newPoints: activityPoint.points,
-        pointsAdded: pointsPerAction,
+        pointsAdded: typeConfig.points,
+        activityType,
       };
     } catch (error) {
-      console.error(`[PointService] tryAccumulate failed for user ${userId}:`, error);
+      console.error(`[PointService] tryAccumulate failed for user ${userId} (type: ${activityType}):`, error);
       throw error;
     }
   }
@@ -125,6 +144,8 @@ class PointAccumulationService {
   resetUserPoints(userId) {
     try {
       const result = this.repository.resetUserPoints(userId);
+      this.repository.resetUserAccumulationLogs(userId);
+      this.repository.resetUserPointAwardHistory(userId);
       console.log(`[PointService] Points reset for user ${userId}`);
       return result;
     } catch (error) {
@@ -140,6 +161,8 @@ class PointAccumulationService {
   resetAllPoints() {
     try {
       const result = this.repository.resetAllPoints();
+      this.repository.resetAllAccumulationLogs();
+      this.repository.resetAllPointAwardHistory();
       console.log('[PointService] All user points reset');
       return result;
     } catch (error) {
@@ -149,7 +172,7 @@ class PointAccumulationService {
   }
 
   /**
-   * Get current point configuration
+   * Get current point configuration (legacy)
    * @returns {Object} - {pointsPerAction: number, cooldownMinutes: number}
    */
   getConfig() {
@@ -158,7 +181,7 @@ class PointAccumulationService {
   }
 
   /**
-   * Update point configuration (admin function)
+   * Update point configuration (legacy, admin function)
    * @param {number} pointsPerAction - Points awarded per action
    * @param {number} cooldownMinutes - Cooldown period in minutes
    * @returns {boolean} - Success status
@@ -170,6 +193,60 @@ class PointAccumulationService {
       return result;
     } catch (error) {
       console.error(`[PointService] setConfig failed (pointsPerAction: ${pointsPerAction}, cooldownMinutes: ${cooldownMinutes}):`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get configuration for a specific activity type
+   * @param {string} activityType - Activity type key
+   * @returns {ActivityTypeConfig|null}
+   */
+  getActivityTypeConfig(activityType) {
+    return this.repository.getActivityTypeConfig(activityType);
+  }
+
+  /**
+   * Get all activity type configurations
+   * @returns {ActivityTypeConfig[]}
+   */
+  getAllActivityTypeConfigs() {
+    return this.repository.getAllActivityTypeConfigs();
+  }
+
+  /**
+   * Set configuration for a specific activity type (admin function)
+   * @param {string} activityType - Activity type key
+   * @param {number} points - Points awarded per action
+   * @param {number} cooldownMinutes - Cooldown in minutes
+   * @param {number|null} dailyCap - Daily cap (null = no cap)
+   * @param {boolean} enabled - Whether this type is enabled
+   * @returns {boolean}
+   */
+  setActivityTypeConfig(activityType, points, cooldownMinutes, dailyCap = null, enabled = true) {
+    try {
+      const config = new ActivityTypeConfig({ activityType, points, cooldownMinutes, dailyCap, enabled });
+      this.repository.setActivityTypeConfig(config);
+      console.log(`[PointService] Activity type config updated: ${activityType} = ${points}pts, ${cooldownMinutes}min CD, cap=${dailyCap}, enabled=${enabled}`);
+      return true;
+    } catch (error) {
+      console.error(`[PointService] setActivityTypeConfig failed for ${activityType}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get point award history for a user
+   * @param {string} userId - Discord user ID
+   * @param {string} [startDate] - Start date (YYYY-MM-DD), optional
+   * @param {string} [endDate] - End date (YYYY-MM-DD), optional
+   * @returns {Array<{activityType: string, totalPoints: number}>}
+   */
+  getPointHistory(userId, startDate, endDate) {
+    try {
+      return this.repository.getPointAwardHistory(userId, startDate, endDate);
+    } catch (error) {
+      console.error(`[PointService] getPointHistory failed for user ${userId}:`, error);
       throw error;
     }
   }

@@ -37,4 +37,6 @@
  * @property {boolean} enabled
  */
 
-module.exports = {};
+module.exports = {
+  ActivityType: require('./ActivityType'),
+};
