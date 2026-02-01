@@ -126,6 +126,10 @@ class SqliteQuizRepository extends IQuizRepository {
       DELETE FROM quiz_publish_history
     `);
 
+    this.stmts.deletePublishHistory = this.db.prepare(`
+      DELETE FROM quiz_publish_history WHERE id = ?
+    `);
+
     this.stmts.getPublishedQuestionCount = this.db.prepare(`
       SELECT COUNT(DISTINCT question_id) as count FROM quiz_publish_history
     `);
@@ -279,6 +283,11 @@ class SqliteQuizRepository extends IQuizRepository {
   updatePublishHistory(history) {
     const model = QuizPublishHistoryMapper.toModel(history);
     const result = this.stmts.updatePublishHistory.run(model);
+    return result.changes > 0;
+  }
+
+  deletePublishHistory(id) {
+    const result = this.stmts.deletePublishHistory.run(id);
     return result.changes > 0;
   }
 

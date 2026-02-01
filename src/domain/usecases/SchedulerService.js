@@ -300,7 +300,9 @@ class SchedulerService {
 
       console.log(`[SchedulerService] Daily quiz #${question.id} published to channel ${quizConfig.quizChannelId}`);
     } catch (error) {
-      console.error(`[SchedulerService] DiscordAPIError: Failed to publish quiz #${question.id}:`, error);
+      // Rollback publish history on message send failure
+      this.quizService.repository.deletePublishHistory(history.id);
+      console.error(`[SchedulerService] Failed to publish quiz #${question.id}, rolled back publish history:`, error);
     }
   }
 
