@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Mettaton Discord Bot - Auto-Update Script
-# Automatic deployment with backup, health check, and rollback
+# Automatic deployment with backup, health check, and rollback (no Docker)
 
 set -euo pipefail
 
@@ -14,14 +14,10 @@ LOG_DIR="$PROJECT_DIR/logs"
 LOG_FILE="$LOG_DIR/deploy.log"
 MAX_BACKUPS=5
 BRANCH="main"
-CONTAINER_NAME="mettaton-bot"
+SERVICE_NAME="mettaton"
 HEALTH_CHECK_RETRIES=6
 HEALTH_CHECK_INTERVAL=10
 LOCK_FILE="/tmp/mettaton-update.lock"
-
-# Docker Compose timeout for slow Raspberry Pi builds (default 60s is too low)
-export COMPOSE_HTTP_TIMEOUT=600
-export DOCKER_CLIENT_TIMEOUT=600
 
 # ============================================================
 # Argument Parsing
@@ -115,7 +111,7 @@ check_for_updates() {
 }
 
 # ============================================================
-# Backup (DB + moon_calendars)
+# Backup (DB + moon_calendars + node_modules hash)
 # ============================================================
 create_backup() {
   local timestamp
@@ -134,6 +130,11 @@ create_backup() {
 
   if [ -d "$PROJECT_DIR/moon_calendars" ]; then
     cp -a "$PROJECT_DIR/moon_calendars" "$backup_path/moon_calendars"
+  fi
+
+  # Save package-lock.json for dependency rollback
+  if [ -f "$PROJECT_DIR/package-lock.json" ]; then
+    cp "$PROJECT_DIR/package-lock.json" "$backup_path/package-lock.json"
   fi
 
   echo "$LOCAL_HEAD" > "$backup_path/commit_hash"
@@ -160,11 +161,17 @@ rotate_backups() {
 }
 
 # ============================================================
-# Deploy (pull + rebuild)
+# Deploy (pull + npm install + restart service)
 # ============================================================
 deploy() {
   log "INFO" "Pulling latest code..."
   cd "$PROJECT_DIR"
+
+  # Save current package-lock hash for comparison
+  local old_lock_hash=""
+  if [ -f "package-lock.json" ]; then
+    old_lock_hash=$(md5sum package-lock.json | cut -d' ' -f1)
+  fi
 
   if ! git pull origin "$BRANCH" 2>>"$LOG_FILE"; then
     log "ERROR" "Git pull failed."
@@ -175,12 +182,27 @@ deploy() {
   new_head=$(git rev-parse --short HEAD)
   log "INFO" "Code updated to: $new_head"
 
-  log "INFO" "Stopping current container..."
-  docker compose down 2>>"$LOG_FILE" || true
+  # Reinstall dependencies only if package-lock.json changed
+  local new_lock_hash=""
+  if [ -f "package-lock.json" ]; then
+    new_lock_hash=$(md5sum package-lock.json | cut -d' ' -f1)
+  fi
 
-  log "INFO" "Building and starting container..."
-  if ! docker compose up -d --build 2>>"$LOG_FILE"; then
-    log "ERROR" "Docker compose up failed."
+  if [ "$old_lock_hash" != "$new_lock_hash" ]; then
+    log "INFO" "package-lock.json changed. Running npm ci..."
+    if ! npm ci --only=production 2>>"$LOG_FILE"; then
+      log "ERROR" "npm ci failed."
+      return 1
+    fi
+    log "INFO" "Dependencies updated."
+  else
+    log "INFO" "Dependencies unchanged. Skipping npm ci."
+  fi
+
+  # Restart the bot service
+  log "INFO" "Restarting bot service..."
+  if ! sudo systemctl restart "$SERVICE_NAME" 2>>"$LOG_FILE"; then
+    log "ERROR" "Failed to restart service."
     return 1
   fi
 
@@ -188,38 +210,37 @@ deploy() {
 }
 
 # ============================================================
-# Health Check (container status + restart count)
+# Health Check (process alive + no crash loops)
 # ============================================================
 health_check() {
-  log "INFO" "Waiting for container to become healthy..."
+  log "INFO" "Checking bot health..."
 
   for i in $(seq 1 "$HEALTH_CHECK_RETRIES"); do
     sleep "$HEALTH_CHECK_INTERVAL"
 
-    if docker ps --filter "name=$CONTAINER_NAME" --filter "status=running" --format '{{.Names}}' | grep -q "$CONTAINER_NAME"; then
-      local restart_count
-      restart_count=$(docker inspect --format='{{.RestartCount}}' "$CONTAINER_NAME" 2>/dev/null || echo "0")
-      if [ "$restart_count" -eq 0 ]; then
-        log "INFO" "Container healthy. No restarts detected. (check $i/$HEALTH_CHECK_RETRIES)"
-        return 0
-      fi
+    if sudo systemctl is-active --quiet "$SERVICE_NAME"; then
+      log "INFO" "Bot is running. (check $i/$HEALTH_CHECK_RETRIES)"
+      return 0
     fi
 
-    log "WARN" "Container not healthy yet (attempt $i/$HEALTH_CHECK_RETRIES)..."
+    log "WARN" "Bot not running yet (attempt $i/$HEALTH_CHECK_RETRIES)..."
   done
 
-  log "ERROR" "Container failed health check after $((HEALTH_CHECK_RETRIES * HEALTH_CHECK_INTERVAL))s."
+  log "ERROR" "Bot failed health check after $((HEALTH_CHECK_RETRIES * HEALTH_CHECK_INTERVAL))s."
   return 1
 }
 
 # ============================================================
-# Rollback (restore code + data)
+# Rollback (restore code + data + dependencies)
 # ============================================================
 rollback() {
   local backup_path="$1"
   log "ERROR" "ROLLING BACK to previous state..."
 
   cd "$PROJECT_DIR"
+
+  # Stop the bot first
+  sudo systemctl stop "$SERVICE_NAME" 2>>"$LOG_FILE" || true
 
   local prev_commit
   prev_commit=$(cat "$backup_path/commit_hash")
@@ -238,9 +259,15 @@ rollback() {
     cp -a "$backup_path/moon_calendars" "$PROJECT_DIR/moon_calendars"
   fi
 
-  log "INFO" "Rebuilding container with rolled-back code..."
-  docker compose down 2>>"$LOG_FILE" || true
-  docker compose up -d --build 2>>"$LOG_FILE"
+  # Restore dependencies if package-lock was backed up
+  if [ -f "$backup_path/package-lock.json" ]; then
+    log "INFO" "Restoring dependencies..."
+    cp "$backup_path/package-lock.json" "$PROJECT_DIR/package-lock.json"
+    npm ci --only=production 2>>"$LOG_FILE" || true
+  fi
+
+  log "INFO" "Restarting bot with rolled-back code..."
+  sudo systemctl start "$SERVICE_NAME" 2>>"$LOG_FILE" || true
 
   log "INFO" "Rollback complete."
 }
@@ -279,8 +306,6 @@ main() {
     log "ERROR" "Deploy failed. Initiating rollback..."
     rollback "$BACKUP_PATH"
   fi
-
-  docker image prune -f 2>>"$LOG_FILE" || true
 
   log "INFO" "========== Update check finished =========="
 }
