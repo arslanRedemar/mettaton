@@ -10,7 +10,7 @@ module.exports = {
   async execute(interaction, _repository, _schedulerService, _pointService, quizService) {
     if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
       return interaction.reply({
-        content: strings.quiz.noPermission(),
+        content: strings.quiz.noPermission,
         ephemeral: true,
       });
     }
@@ -20,7 +20,7 @@ module.exports = {
 
       // Build status text
       const lines = [
-        strings.quiz.statusTitle(),
+        strings.quiz.statusTitle,
         strings.quiz.statusInfo(
           status.total,
           status.remaining,
@@ -35,7 +35,7 @@ module.exports = {
       if (status.todayQuestion) {
         lines.push(strings.quiz.statusToday(status.todayQuestion.id, status.todayQuestion.category));
       } else {
-        lines.push(strings.quiz.statusNoToday());
+        lines.push(strings.quiz.statusNoToday);
       }
 
       console.log(`[quiz/status] Status requested by ${interaction.user.tag}`);

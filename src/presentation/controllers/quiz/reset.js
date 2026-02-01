@@ -10,7 +10,7 @@ module.exports = {
   async execute(interaction, _repository, _schedulerService, _pointService, quizService) {
     if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
       return interaction.reply({
-        content: strings.quiz.noPermission(),
+        content: strings.quiz.noPermission,
         ephemeral: true,
       });
     }
@@ -29,7 +29,7 @@ module.exports = {
       );
 
       const response = await interaction.reply({
-        content: strings.quiz.resetConfirm(),
+        content: strings.quiz.resetConfirm,
         components: [row],
         ephemeral: true,
       });
@@ -52,14 +52,14 @@ module.exports = {
         } else {
           console.log(`[quiz/reset] Reset cancelled by ${interaction.user.tag}`);
           await confirmation.update({
-            content: strings.quiz.resetCancelled(),
+            content: strings.quiz.resetCancelled,
             components: [],
           });
         }
       } catch (error) {
         console.log(`[quiz/reset] Timeout for reset by ${interaction.user.tag}`);
         await interaction.editReply({
-          content: strings.quiz.resetTimeout(),
+          content: strings.quiz.resetTimeout,
           components: [],
         });
       }

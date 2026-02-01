@@ -10,7 +10,7 @@ module.exports = {
   async execute(interaction, _repository, _schedulerService, _pointService, quizService) {
     if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
       return interaction.reply({
-        content: strings.quiz.noPermission(),
+        content: strings.quiz.noPermission,
         ephemeral: true,
       });
     }
@@ -21,7 +21,7 @@ module.exports = {
       if (allQuestions.length === 0) {
         console.log(`[quiz/list] No questions found, requested by ${interaction.user.tag}`);
         return interaction.reply({
-          content: strings.quiz.listEmpty(),
+          content: strings.quiz.listEmpty,
           ephemeral: true,
         });
       }
@@ -29,7 +29,7 @@ module.exports = {
       // Build list text
       const lines = [strings.quiz.listTitle(allQuestions.length), ''];
       allQuestions.forEach(({ question, isPublished }) => {
-        const status = isPublished ? strings.quiz.listStatusPublished() : strings.quiz.listStatusPending();
+        const status = isPublished ? strings.quiz.listStatusPublished : strings.quiz.listStatusPending;
         lines.push(strings.quiz.listItem(question.id, question.category, question.getPreview(), status));
       });
 

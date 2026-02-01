@@ -11,7 +11,7 @@ module.exports = {
   async execute(interaction, _repository, _schedulerService, _pointService, quizService) {
     if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
       return interaction.reply({
-        content: strings.quiz.noPermission(),
+        content: strings.quiz.noPermission,
         ephemeral: true,
       });
     }
@@ -65,14 +65,14 @@ module.exports = {
         } else {
           console.log(`[quiz/delete] Deletion cancelled for question #${questionId} by ${interaction.user.tag}`);
           await confirmation.update({
-            content: strings.quiz.deleteCancelled(),
+            content: strings.quiz.deleteCancelled,
             components: [],
           });
         }
       } catch (error) {
         console.log(`[quiz/delete] Timeout for question #${questionId} deletion by ${interaction.user.tag}`);
         await interaction.editReply({
-          content: strings.quiz.deleteCancelled(),
+          content: strings.quiz.deleteCancelled,
           components: [],
         });
       }

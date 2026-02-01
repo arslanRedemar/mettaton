@@ -19,7 +19,7 @@ module.exports = {
   async execute(interaction, _repository, _schedulerService, _pointService, quizService) {
     if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
       return interaction.reply({
-        content: strings.quiz.noPermission(),
+        content: strings.quiz.noPermission,
         ephemeral: true,
       });
     }
@@ -57,7 +57,7 @@ module.exports = {
       if (error.message === 'INVALID_ANSWER') {
         console.log(`[quiz/register] Invalid answer by ${interaction.user.tag}: ${answer}`);
         return interaction.reply({
-          content: strings.quiz.registerInvalidAnswer(),
+          content: strings.quiz.registerInvalidAnswer,
           ephemeral: true,
         });
       }
@@ -73,7 +73,7 @@ module.exports = {
       if (error.message === 'DUPLICATE_QUESTION') {
         console.log(`[quiz/register] Duplicate question by ${interaction.user.tag}`);
         return interaction.reply({
-          content: strings.quiz.registerDuplicate(),
+          content: strings.quiz.registerDuplicate,
           ephemeral: true,
         });
       }

@@ -32,7 +32,7 @@ module.exports = {
       if (error.message === 'INVALID_OPTION') {
         console.log(`[quiz/answer] Invalid option by ${interaction.user.tag}: ${selectedOption}`);
         return interaction.reply({
-          content: strings.quiz.answerInvalid(),
+          content: strings.quiz.answerInvalid,
           ephemeral: true,
         });
       }
@@ -40,7 +40,7 @@ module.exports = {
       if (error.message === 'NO_QUIZ_TODAY') {
         console.log(`[quiz/answer] No quiz today, requested by ${interaction.user.tag}`);
         return interaction.reply({
-          content: strings.quiz.answerNoQuiz(),
+          content: strings.quiz.answerNoQuiz,
           ephemeral: true,
         });
       }
@@ -48,7 +48,7 @@ module.exports = {
       if (error.message === 'ANSWER_CLOSED') {
         console.log(`[quiz/answer] Answer closed, requested by ${interaction.user.tag}`);
         return interaction.reply({
-          content: strings.quiz.answerClosed(),
+          content: strings.quiz.answerClosed,
           ephemeral: true,
         });
       }
