@@ -1,6 +1,6 @@
 /**
- * 봇 UI 문자열 관리 서비스
- * DB 오버라이드를 메모리 캐시로 관리하며, 기본값 fallback 제공
+ * Bot UI String Management Service
+ * Manages DB overrides via in-memory cache with default fallback
  */
 class StringService {
   constructor(repository) {
@@ -101,11 +101,22 @@ class StringService {
           + '- 추가된 회원: {membersAdded}명\n'
           + '- 제거된 회원: {membersRemoved}명\n\n'
           + '**강의 참석자 정리:**\n'
-          + '- 제거된 참석 기록: {attendeesRemoved}건\n\n'
+          + '- 제거된 강의 참석 기록: {lectureAttendeesRemoved}건\n'
+          + '- 제거된 질문 참석 기록: {questionAttendeesRemoved}건\n\n'
           + '**메시지 ID 검증:**\n'
           + '- 정리된 강의 메시지: {lectureMessagesCleaned}건\n'
-          + '- 정리된 질문 메시지: {questionMessagesCleaned}건',
-        params: ['membersAdded', 'membersRemoved', 'attendeesRemoved', 'lectureMessagesCleaned', 'questionMessagesCleaned'],
+          + '- 정리된 질문 메시지: {questionMessagesCleaned}건\n'
+          + '- 정리된 수행 메시지: {practiceMessagesCleaned}건\n'
+          + '- 정리된 퀴즈 메시지: {quizMessagesCleaned}건\n\n'
+          + '**포인트 정리:**\n'
+          + '- 제거된 포인트 기록: {pointsRemoved}건\n'
+          + '- 제거된 누적 로그: {accumulationLogsRemoved}건\n\n'
+          + '**수행 계획 정리:**\n'
+          + '- 제거된 수행 계획: {practicesRemoved}건\n'
+          + '- 제거된 수행 기록: {practiceRecordsRemoved}건\n\n'
+          + '**퀴즈 이력 정리:**\n'
+          + '- 정리된 퀴즈 이력: {quizHistoryCleaned}건',
+        params: ['membersAdded', 'membersRemoved', 'lectureAttendeesRemoved', 'questionAttendeesRemoved', 'lectureMessagesCleaned', 'questionMessagesCleaned', 'practiceMessagesCleaned', 'quizMessagesCleaned', 'pointsRemoved', 'accumulationLogsRemoved', 'practicesRemoved', 'practiceRecordsRemoved', 'quizHistoryCleaned'],
       },
       'sync.error': { value: '❌ 동기화 중 오류가 발생했습니다: {error}', params: ['error'] },
 
@@ -224,30 +235,44 @@ class StringService {
 
   loadFromDatabase() {
     this.cache.clear();
-    const rows = this.repository.getAllStrings();
-    for (const row of rows) {
-      this.cache.set(row.key, {
-        value: row.value,
-        params: row.params ? JSON.parse(row.params) : null,
-      });
+    try {
+      const rows = this.repository.getAllStrings();
+      for (const row of rows) {
+        this.cache.set(row.key, {
+          value: row.value,
+          params: row.params ? JSON.parse(row.params) : null,
+        });
+      }
+      console.log(`[string-service/load] Loaded ${rows.length} string overrides from database`);
+    } catch (error) {
+      console.error(`[string-service/load] ${error.constructor.name}: Failed to load strings from database:`, error);
+      throw error;
     }
   }
 
   refreshKey(key) {
-    const row = this.repository.getString(key);
-    if (row) {
-      this.cache.set(key, {
-        value: row.value,
-        params: row.params ? JSON.parse(row.params) : null,
-      });
-    } else {
-      this.cache.delete(key);
+    try {
+      const row = this.repository.getString(key);
+      if (row) {
+        this.cache.set(key, {
+          value: row.value,
+          params: row.params ? JSON.parse(row.params) : null,
+        });
+        console.log(`[string-service/refresh] Cache refreshed for key: ${key}`);
+      } else {
+        this.cache.delete(key);
+        console.log(`[string-service/refresh] Cache cleared for key: ${key} (reverted to default)`);
+      }
+    } catch (error) {
+      console.error(`[string-service/refresh] ${error.constructor.name}: Failed to refresh key "${key}":`, error);
+      throw error;
     }
   }
 
   get(key, replacements = {}) {
     const entry = this.cache.get(key) || this.defaults.get(key);
     if (!entry) {
+      console.log(`[string-service/get] Missing string key: ${key}`);
       return `[missing string: ${key}]`;
     }
     let result = entry.value;
@@ -279,15 +304,32 @@ class StringService {
   setString(key, value) {
     const def = this.defaults.get(key);
     if (!def) {
+      console.log(`[string-service/set] Unknown string key: ${key}`);
       throw new Error(`Unknown string key: ${key}`);
     }
-    this.repository.setString(key, value, def.params);
-    this.refreshKey(key);
+    try {
+      this.repository.setString(key, value, def.params);
+      this.refreshKey(key);
+      console.log(`[string-service/set] String updated: ${key}`);
+    } catch (error) {
+      console.error(`[string-service/set] ${error.constructor.name}: Failed to set string "${key}":`, error);
+      throw error;
+    }
   }
 
   resetString(key) {
-    this.repository.deleteString(key);
-    this.cache.delete(key);
+    try {
+      const deleted = this.repository.deleteString(key);
+      this.cache.delete(key);
+      if (deleted) {
+        console.log(`[string-service/reset] String reset to default: ${key}`);
+      } else {
+        console.log(`[string-service/reset] No override found for: ${key} (already default)`);
+      }
+    } catch (error) {
+      console.error(`[string-service/reset] ${error.constructor.name}: Failed to reset string "${key}":`, error);
+      throw error;
+    }
   }
 }
 

@@ -3,7 +3,7 @@ const strings = require('./strings');
 
 module.exports = {
   name: 'interactionCreate',
-  async execute(interaction, repository, schedulerService, pointAccumulationService, quizService) {
+  async execute(interaction, repository, schedulerService, pointAccumulationService, quizService, inactiveMemberService) {
     if (interaction.isAutocomplete()) {
       const command = commands.find((cmd) => cmd.data.name === interaction.commandName);
       if (command && command.autocomplete) {
@@ -29,7 +29,12 @@ module.exports = {
     const userId = interaction.user.id;
 
     try {
-      await command.execute(interaction, repository, schedulerService, pointAccumulationService, quizService);
+      // Route inactive management commands to inactiveMemberService
+      if (interaction.commandName.startsWith('비활동')) {
+        await command.execute(interaction, inactiveMemberService);
+      } else {
+        await command.execute(interaction, repository, schedulerService, pointAccumulationService, quizService);
+      }
       console.log(`[interactionCreate] Command /${interaction.commandName} executed successfully (user: ${userTag}, ${userId})`);
     } catch (error) {
       console.error(`[interactionCreate] Command /${interaction.commandName} failed (user: ${userTag}, ${userId}):`, error);

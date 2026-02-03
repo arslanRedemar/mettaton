@@ -18,7 +18,12 @@ module.exports = {
 
     if (!question) {
       console.log(`[question/answer] Question #${id} not found, requested by ${interaction.user.tag}`);
-      return interaction.reply(strings.question.answerNotFound);
+      try {
+        return interaction.reply(strings.question.answerNotFound);
+      } catch (error) {
+        console.error(`[question/answer] ${error.constructor.name}: Failed to send not found reply to ${interaction.user.tag}:`, error);
+        return;
+      }
     }
 
     question.setAnswer(answer, interaction.user.id);
@@ -32,7 +37,7 @@ module.exports = {
           console.log(`[question/answer] Points awarded to ${interaction.user.tag} (${interaction.user.id}): +${pointResult.pointsAdded}`);
         }
       } catch (err) {
-        console.error(`[question/answer] Point accumulation error for ${interaction.user.tag} (${interaction.user.id}):`, err);
+        console.error(`[question/answer] ${err.constructor.name}: Point accumulation error for ${interaction.user.tag} (${interaction.user.id}):`, err);
       }
     }
 
@@ -57,11 +62,18 @@ module.exports = {
           });
         }
       } catch (error) {
-        console.error(`[question/answer] Failed to update Discord message for question #${id}:`, error);
+        console.error(`[question/answer] ${error.constructor.name}: Failed to update Discord message for question #${id}:`, error);
       }
+    } else if (!channel) {
+      console.error(`[question/answer] ChannelNotFoundError: Question channel not found (ID: ${config.channels.question})`);
     }
 
-    console.log(`[question/answer] Question #${id} answered by ${interaction.user.tag}`);
-    await interaction.reply(strings.question.answerSuccess(id));
+    console.log(`[question/answer] Question #${id} answered by ${interaction.user.tag} (${interaction.user.id})`);
+
+    try {
+      await interaction.reply(strings.question.answerSuccess(id));
+    } catch (error) {
+      console.error(`[question/answer] ${error.constructor.name}: Failed to send success reply to ${interaction.user.tag}:`, error);
+    }
   },
 };

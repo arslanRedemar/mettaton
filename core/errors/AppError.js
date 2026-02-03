@@ -25,9 +25,16 @@ class DatabaseError extends AppError {
   }
 }
 
+class PermissionError extends AppError {
+  constructor(message = '권한이 없습니다.') {
+    super(message, 403);
+  }
+}
+
 module.exports = {
   AppError,
   NotFoundError,
   ValidationError,
   DatabaseError,
+  PermissionError,
 };

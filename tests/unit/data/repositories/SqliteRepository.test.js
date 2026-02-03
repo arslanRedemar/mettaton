@@ -374,8 +374,8 @@ describe('SqliteRepository', () => {
 
         const activities = repository.getAllMemberActivities();
         expect(activities.length).toBe(1);
-        expect(activities[0].user_id).toBe('user123');
-        expect(activities[0].last_active_at).toBeDefined();
+        expect(activities[0].userId).toBe('user123');
+        expect(activities[0].lastActiveAt).toBeDefined();
       });
 
       it('should update existing member activity', () => {
@@ -386,7 +386,7 @@ describe('SqliteRepository', () => {
         const after = repository.getAllMemberActivities();
 
         expect(after.length).toBe(1);
-        expect(after[0].user_id).toBe('user123');
+        expect(after[0].userId).toBe('user123');
       });
 
       it('should track multiple members independently', () => {
@@ -396,7 +396,7 @@ describe('SqliteRepository', () => {
 
         const activities = repository.getAllMemberActivities();
         expect(activities.length).toBe(3);
-        const userIds = activities.map((a) => a.user_id).sort();
+        const userIds = activities.map((a) => a.userId).sort();
         expect(userIds).toEqual(['user1', 'user2', 'user3']);
       });
     });
@@ -436,7 +436,7 @@ describe('SqliteRepository', () => {
 
         expect(inserted).toBe(true);
         const activities = repository.getAllMemberActivities();
-        expect(activities.some((a) => a.user_id === 'newUser')).toBe(true);
+        expect(activities.some((a) => a.userId === 'newUser')).toBe(true);
       });
 
       it('should not overwrite existing and return false', () => {
@@ -445,7 +445,7 @@ describe('SqliteRepository', () => {
 
         expect(inserted).toBe(false);
         const activities = repository.getAllMemberActivities();
-        expect(activities.filter((a) => a.user_id === 'existingUser').length).toBe(1);
+        expect(activities.filter((a) => a.userId === 'existingUser').length).toBe(1);
       });
     });
 

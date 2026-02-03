@@ -13,7 +13,13 @@ const { SqliteRepository } = require('./data/repositories');
 const SqliteQuizRepository = require('./data/repositories/SqliteQuizRepository');
 
 // Domain Layer - Usecases
-const { SchedulerService, MoonCalendarService, StringService, PointAccumulationService } = require('./domain/usecases');
+const {
+  SchedulerService,
+  MoonCalendarService,
+  StringService,
+  PointAccumulationService,
+  InactiveMemberService,
+} = require('./domain/usecases');
 const QuizService = require('./domain/usecases/QuizService');
 
 // Presentation Layer
@@ -39,6 +45,7 @@ container.register('stringService', stringService);
 
 const moonCalendarService = new MoonCalendarService(path.join(__dirname, '..', config.calendarDir));
 const pointAccumulationService = new PointAccumulationService(repository);
+const inactiveMemberService = new InactiveMemberService(repository);
 
 // Initialize Quiz Repository and Service
 const quizRepository = new SqliteQuizRepository();
@@ -75,9 +82,9 @@ function registerEvents() {
       client.on(event.name, async (...args) => {
         try {
           if (event.name === 'interactionCreate') {
-            await event.execute(...args, repository, schedulerService, pointAccumulationService, quizService);
+            await event.execute(...args, repository, schedulerService, pointAccumulationService, quizService, inactiveMemberService);
           } else if (event.name === 'messageCreate') {
-            await event.execute(...args, { moonCalendarService, repository, pointAccumulationService });
+            await event.execute(...args, { moonCalendarService, repository, pointAccumulationService, inactiveMemberService });
           } else if (event.name === 'messageDelete') {
             await event.execute(...args, repository);
           } else if (event.name === 'messageReactionAdd' || event.name === 'messageReactionRemove') {

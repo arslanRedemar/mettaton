@@ -79,6 +79,85 @@ describe('Question Entity', () => {
     });
   });
 
+  describe('addAttendee', () => {
+    it('should add a new attendee', () => {
+      const result = question.addAttendee('user456');
+
+      expect(result).toBe(true);
+      expect(question.attendees).toContain('user456');
+      expect(question.attendees.length).toBe(1);
+    });
+
+    it('should not add duplicate attendee', () => {
+      question.addAttendee('user456');
+      const result = question.addAttendee('user456');
+
+      expect(result).toBe(false);
+      expect(question.attendees.length).toBe(1);
+    });
+
+    it('should add multiple different attendees', () => {
+      question.addAttendee('user456');
+      question.addAttendee('user789');
+
+      expect(question.attendees.length).toBe(2);
+      expect(question.attendees).toContain('user456');
+      expect(question.attendees).toContain('user789');
+    });
+  });
+
+  describe('removeAttendee', () => {
+    beforeEach(() => {
+      question.addAttendee('user456');
+      question.addAttendee('user789');
+    });
+
+    it('should remove an existing attendee', () => {
+      const result = question.removeAttendee('user456');
+
+      expect(result).toBe(true);
+      expect(question.attendees).not.toContain('user456');
+      expect(question.attendees.length).toBe(1);
+    });
+
+    it('should return false when removing non-existent attendee', () => {
+      const result = question.removeAttendee('user999');
+
+      expect(result).toBe(false);
+      expect(question.attendees.length).toBe(2);
+    });
+
+    it('should handle removing all attendees', () => {
+      question.removeAttendee('user456');
+      question.removeAttendee('user789');
+
+      expect(question.attendees.length).toBe(0);
+    });
+  });
+
+  describe('hasAttendee', () => {
+    beforeEach(() => {
+      question.addAttendee('user456');
+    });
+
+    it('should return true for existing attendee', () => {
+      expect(question.hasAttendee('user456')).toBe(true);
+    });
+
+    it('should return false for non-existent attendee', () => {
+      expect(question.hasAttendee('user999')).toBe(false);
+    });
+
+    it('should return false for empty attendees list', () => {
+      const emptyQuestion = new Question({
+        author: 'user123',
+        question: 'test',
+      });
+
+      expect(emptyQuestion.hasAttendee('user456')).toBe(false);
+    });
+  });
+
   describe('toJSON', () => {
     it('should return correct JSON representation for unanswered question', () => {
       question.messageId = 'msg123';

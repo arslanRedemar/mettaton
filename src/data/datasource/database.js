@@ -219,7 +219,7 @@ function initializeDatabase(dbPath) {
     VALUES (1, '09:00', '21:00', 1);
   `);
 
-  console.log('✅ 데이터베이스 초기화 완료');
+  console.log('✅ Database initialization complete');
   return db;
 }
 

@@ -85,9 +85,11 @@ describe('StringService', () => {
   });
 
   describe('getAllKeys()', () => {
-    it('should return all 110 default keys', () => {
+    it('should return all default keys', () => {
       const keys = service.getAllKeys();
-      expect(keys.length).toBe(110);
+      // Verify we have a reasonable number of keys (currently 172 including moon calendar)
+      expect(keys.length).toBeGreaterThan(100);
+      expect(keys.length).toBe(172);
     });
 
     it('should mark overridden keys', () => {
