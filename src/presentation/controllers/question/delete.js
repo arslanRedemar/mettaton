@@ -14,20 +14,34 @@ module.exports = {
 
     if (!question) {
       console.log(`[question/delete] Question #${questionId} not found, requested by ${interaction.user.tag}`);
-      return interaction.reply({ content: strings.question.deleteNotFound(questionId), ephemeral: true });
+      try {
+        return interaction.reply({ content: strings.question.deleteNotFound(questionId), ephemeral: true });
+      } catch (error) {
+        console.error(`[question/delete] ${error.constructor.name}: Failed to send not found reply to ${interaction.user.tag}:`, error);
+        return;
+      }
     }
 
     const channel = interaction.guild.channels.cache.get(config.channels.question);
     if (channel && question.messageId) {
       try {
         const msg = await channel.messages.fetch(question.messageId);
-        if (msg) await msg.delete();
+        if (msg) {
+          await msg.delete();
+        }
       } catch (err) {
-        console.error(`[question/delete] Failed to delete Discord message for question #${questionId}:`, err);
+        console.error(`[question/delete] ${err.constructor.name}: Failed to delete Discord message for question #${questionId}:`, err);
       }
+    } else if (!channel) {
+      console.error(`[question/delete] ChannelNotFoundError: Question channel not found (ID: ${config.channels.question})`);
     }
 
-    console.log(`[question/delete] Question #${questionId} deleted by ${interaction.user.tag}`);
-    await interaction.reply({ content: strings.question.deleteSuccess(question.id), ephemeral: true });
+    console.log(`[question/delete] Question #${questionId} deleted by ${interaction.user.tag} (${interaction.user.id})`);
+
+    try {
+      await interaction.reply({ content: strings.question.deleteSuccess(question.id), ephemeral: true });
+    } catch (error) {
+      console.error(`[question/delete] ${error.constructor.name}: Failed to send delete success reply to ${interaction.user.tag}:`, error);
+    }
   },
 };

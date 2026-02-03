@@ -51,16 +51,20 @@ module.exports = {
           repository.updateSchedule(schedule);
 
           const attendeeInfo = `${schedule.attendees.length}명 (${schedule.attendees.map((uid) => `<@${uid}>`).join(', ')})`;
-          await reaction.message.edit({
-            embeds: [
-              new EmbedBuilder()
-                .setTitle(strings.schedule.embedTitle(schedule.id, schedule.title))
-                .setDescription(
-                  strings.schedule.embedDescription(schedule.location, schedule.date, schedule.start, schedule.end, schedule.teacher, attendeeInfo),
-                )
-                .setColor(0x00cc66),
-            ],
-          });
+          try {
+            await reaction.message.edit({
+              embeds: [
+                new EmbedBuilder()
+                  .setTitle(strings.schedule.embedTitle(schedule.id, schedule.title))
+                  .setDescription(
+                    strings.schedule.embedDescription(schedule.location, schedule.date, schedule.start, schedule.end, schedule.teacher, attendeeInfo),
+                  )
+                  .setColor(0x00cc66),
+              ],
+            });
+          } catch (editError) {
+            console.error(`[messageReactionAdd] ${editError.constructor.name}: Failed to edit schedule message #${schedule.id}:`, editError);
+          }
           console.log(`[messageReactionAdd] Schedule #${schedule.id} attendee added: ${user.tag} (${user.id})`);
         } else if (reaction.emoji.name === '❌') {
           schedule.removeAttendee(user.id);
@@ -69,20 +73,24 @@ module.exports = {
           const attendeeInfo = schedule.attendees.length > 0
             ? `${schedule.attendees.length}명 (${schedule.attendees.map((uid) => `<@${uid}>`).join(', ')})`
             : '0명';
-          await reaction.message.edit({
-            embeds: [
-              new EmbedBuilder()
-                .setTitle(strings.schedule.embedTitle(schedule.id, schedule.title))
-                .setDescription(
-                  strings.schedule.embedDescription(schedule.location, schedule.date, schedule.start, schedule.end, schedule.teacher, attendeeInfo),
-                )
-                .setColor(0x00cc66),
-            ],
-          });
+          try {
+            await reaction.message.edit({
+              embeds: [
+                new EmbedBuilder()
+                  .setTitle(strings.schedule.embedTitle(schedule.id, schedule.title))
+                  .setDescription(
+                    strings.schedule.embedDescription(schedule.location, schedule.date, schedule.start, schedule.end, schedule.teacher, attendeeInfo),
+                  )
+                  .setColor(0x00cc66),
+              ],
+            });
+          } catch (editError) {
+            console.error(`[messageReactionAdd] ${editError.constructor.name}: Failed to edit schedule message #${schedule.id}:`, editError);
+          }
           console.log(`[messageReactionAdd] Schedule #${schedule.id} attendee removed via ❌: ${user.tag} (${user.id})`);
         }
       } catch (error) {
-        console.error(`[messageReactionAdd] Schedule #${schedule.id} reaction handling failed for ${user.tag} (${user.id}):`, error);
+        console.error(`[messageReactionAdd] ${error.constructor.name}: Schedule #${schedule.id} reaction handling failed for ${user.tag} (${user.id}):`, error);
       }
     } else if (channel.id === config.channels.question) {
       const question = repository.getQuestionByMessageId(reaction.message.id);

@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, PermissionFlagsBits, ChannelType } = require('discord.js');
 const strings = require('../../interfaces/strings');
+const MeetingConfig = require('../../../domain/entities/MeetingConfig');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -69,8 +70,7 @@ module.exports = {
       const activity = interaction.options.getString('활동내용');
 
       // Validate time format
-      const timeRegex = /^(([01]?\d|2[0-3]):([0-5]\d)|24:00)$/;
-      if (!timeRegex.test(meetingStartTime) || !timeRegex.test(meetingEndTime)) {
+      if (!MeetingConfig.isValidTimeFormat(meetingStartTime) || !MeetingConfig.isValidTimeFormat(meetingEndTime)) {
         console.log(`[meeting/config] Invalid time format by ${interaction.user.tag}: start=${meetingStartTime}, end=${meetingEndTime}`);
         return interaction.reply({
           content: strings.meeting.invalidTimeFormat,
@@ -81,7 +81,7 @@ module.exports = {
       const currentConfig = repository.getMeetingConfig();
       const enabled = currentConfig ? currentConfig.enabled : false;
 
-      repository.setMeetingConfig({
+      const meetingConfig = new MeetingConfig({
         channelId: channel.id,
         scheduleHour,
         scheduleMinute,
@@ -92,19 +92,25 @@ module.exports = {
         enabled,
       });
 
+      repository.setMeetingConfig(meetingConfig);
+
       // Reschedule if enabled
       if (enabled && schedulerService) {
         schedulerService.reschedule();
       }
 
-      const scheduleTime = `${String(scheduleHour).padStart(2, '0')}:${String(scheduleMinute).padStart(2, '0')}`;
-      const status = enabled ? strings.meeting.statusEnabled : strings.meeting.statusDisabled;
+      const scheduleTime = meetingConfig.getScheduleTime();
+      const status = meetingConfig.getStatusString(strings);
 
       console.log(`[meeting/config] Meeting config saved by ${interaction.user.tag}: channel=${channel.id}, time=${scheduleTime}, ${meetingStartTime}~${meetingEndTime}`);
-      await interaction.reply({
-        content: strings.meeting.configSaved(channel.id, scheduleTime, meetingStartTime, meetingEndTime, location, activity, status),
-        ephemeral: true,
-      });
+      try {
+        await interaction.reply({
+          content: strings.meeting.configSaved(channel.id, scheduleTime, meetingStartTime, meetingEndTime, location, activity, status),
+          ephemeral: true,
+        });
+      } catch (error) {
+        console.error(`[meeting/config] DiscordAPIError: Failed to send config saved reply:`, error);
+      }
     } else if (subcommand === '활성화') {
       const config = repository.getMeetingConfig();
       if (!config) {
@@ -115,17 +121,22 @@ module.exports = {
         });
       }
 
-      repository.setMeetingConfig({ ...config, enabled: true });
+      config.enable();
+      repository.setMeetingConfig(config);
 
       if (schedulerService) {
         schedulerService.reschedule();
       }
 
       console.log(`[meeting/config] Meeting enabled by ${interaction.user.tag}`);
-      await interaction.reply({
-        content: strings.meeting.enableSuccess,
-        ephemeral: true,
-      });
+      try {
+        await interaction.reply({
+          content: strings.meeting.enableSuccess,
+          ephemeral: true,
+        });
+      } catch (error) {
+        console.error(`[meeting/config] DiscordAPIError: Failed to send enable success reply:`, error);
+      }
     } else if (subcommand === '비활성화') {
       const config = repository.getMeetingConfig();
       if (!config) {
@@ -136,17 +147,22 @@ module.exports = {
         });
       }
 
-      repository.setMeetingConfig({ ...config, enabled: false });
+      config.disable();
+      repository.setMeetingConfig(config);
 
       if (schedulerService) {
         schedulerService.cancelSchedule();
       }
 
       console.log(`[meeting/config] Meeting disabled by ${interaction.user.tag}`);
-      await interaction.reply({
-        content: strings.meeting.disableSuccess,
-        ephemeral: true,
-      });
+      try {
+        await interaction.reply({
+          content: strings.meeting.disableSuccess,
+          ephemeral: true,
+        });
+      } catch (error) {
+        console.error(`[meeting/config] DiscordAPIError: Failed to send disable success reply:`, error);
+      }
     } else if (subcommand === '확인') {
       const config = repository.getMeetingConfig();
       if (!config) {
@@ -157,14 +173,18 @@ module.exports = {
         });
       }
 
-      const scheduleTime = `${String(config.scheduleHour).padStart(2, '0')}:${String(config.scheduleMinute).padStart(2, '0')}`;
-      const status = config.enabled ? strings.meeting.statusEnabled : strings.meeting.statusDisabled;
+      const scheduleTime = config.getScheduleTime();
+      const status = config.getStatusString(strings);
 
       console.log(`[meeting/config] Config viewed by ${interaction.user.tag}`);
-      await interaction.reply({
-        content: strings.meeting.configDisplay(config.channelId, scheduleTime, config.meetingStartTime, config.meetingEndTime, config.location, config.activity, status),
-        ephemeral: true,
-      });
+      try {
+        await interaction.reply({
+          content: strings.meeting.configDisplay(config.channelId, scheduleTime, config.meetingStartTime, config.meetingEndTime, config.location, config.activity, status),
+          ephemeral: true,
+        });
+      } catch (error) {
+        console.error(`[meeting/config] DiscordAPIError: Failed to send config display reply:`, error);
+      }
     }
   },
 };

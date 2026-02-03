@@ -25,18 +25,6 @@
  * @property {string} [messageId]
  */
 
-/**
- * @typedef {Object} MeetingConfig
- * @property {string} channelId
- * @property {number} scheduleHour
- * @property {number} scheduleMinute
- * @property {string} meetingStartTime
- * @property {string} meetingEndTime
- * @property {string} location
- * @property {string} activity
- * @property {boolean} enabled
- */
-
 module.exports = {
   ActivityType: require('./ActivityType'),
 };

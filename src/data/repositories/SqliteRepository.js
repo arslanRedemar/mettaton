@@ -6,6 +6,8 @@ const {
   PersonalPracticeMapper,
   ActivityTypeConfigMapper,
   PointAccumulationLogMapper,
+  MeetingConfigMapper,
+  MemberActivityMapper,
 } = require('../mappers');
 
 /**
@@ -136,6 +138,9 @@ class SqliteRepository {
       `),
       getAllMemberActivities: this.db.prepare(`
         SELECT user_id, last_active_at FROM member_activity
+      `),
+      getMemberActivity: this.db.prepare(`
+        SELECT user_id, last_active_at FROM member_activity WHERE user_id = ?
       `),
 
       // Sync Operations
@@ -543,7 +548,13 @@ class SqliteRepository {
   }
 
   getAllMemberActivities() {
-    return this.stmts.getAllMemberActivities.all();
+    const rows = this.stmts.getAllMemberActivities.all();
+    return rows.map((row) => MemberActivityMapper.toEntity(row));
+  }
+
+  getMemberActivity(userId) {
+    const row = this.stmts.getMemberActivity.get(userId);
+    return MemberActivityMapper.toEntity(row);
   }
 
   getInactiveDays() {
@@ -580,32 +591,23 @@ class SqliteRepository {
 
   // ==================== Meeting Config Operations ====================
 
+  /**
+   * Get meeting configuration
+   * @returns {MeetingConfig|null}
+   */
   getMeetingConfig() {
     const row = this.stmts.getMeetingConfig.get();
-    if (!row) return null;
-    return {
-      channelId: row.channel_id,
-      scheduleHour: row.schedule_hour,
-      scheduleMinute: row.schedule_minute,
-      meetingStartTime: row.meeting_start_time,
-      meetingEndTime: row.meeting_end_time,
-      location: row.location,
-      activity: row.activity,
-      enabled: row.enabled === 1,
-    };
+    return MeetingConfigMapper.toDomain(row);
   }
 
+  /**
+   * Set meeting configuration
+   * @param {MeetingConfig|Object} config - MeetingConfig entity or plain object
+   * @returns {boolean}
+   */
   setMeetingConfig(config) {
-    this.stmts.upsertMeetingConfig.run({
-      channelId: config.channelId,
-      scheduleHour: config.scheduleHour,
-      scheduleMinute: config.scheduleMinute,
-      meetingStartTime: config.meetingStartTime,
-      meetingEndTime: config.meetingEndTime,
-      location: config.location,
-      activity: config.activity,
-      enabled: config.enabled ? 1 : 0,
-    });
+    const params = MeetingConfigMapper.toDbParams(config);
+    this.stmts.upsertMeetingConfig.run(params);
     return true;
   }
 

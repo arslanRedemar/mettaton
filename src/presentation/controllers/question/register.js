@@ -21,21 +21,30 @@ module.exports = {
 
     const channel = interaction.guild.channels.cache.get(config.channels.question);
     if (channel) {
-      const msg = await channel.send({
-        embeds: [
-          new EmbedBuilder()
-            .setTitle(strings.question.embedTitle(question.id))
-            .setDescription(strings.question.embedDescription(question.question, question.author, '0명'))
-            .setColor(0xffaa00),
-        ],
-      });
-      question.messageId = msg.id;
-      repository.updateQuestion(question);
+      try {
+        const msg = await channel.send({
+          embeds: [
+            new EmbedBuilder()
+              .setTitle(strings.question.embedTitle(question.id))
+              .setDescription(strings.question.embedDescription(question.question, question.author, '0명'))
+              .setColor(0xffaa00),
+          ],
+        });
+        question.messageId = msg.id;
+        repository.updateQuestion(question);
+      } catch (error) {
+        console.error(`[question/register] ${error.constructor.name}: Failed to send embed message for question #${question.id}:`, error);
+      }
     } else {
-      console.error(`[question/register] Question channel not found (ID: ${config.channels.question})`);
+      console.error(`[question/register] ChannelNotFoundError: Question channel not found (ID: ${config.channels.question})`);
     }
 
     console.log(`[question/register] Question #${question.id} registered by ${interaction.user.tag} (${interaction.user.id})`);
-    await interaction.reply(strings.question.registerSuccess);
+
+    try {
+      await interaction.reply(strings.question.registerSuccess);
+    } catch (error) {
+      console.error(`[question/register] ${error.constructor.name}: Failed to send reply to ${interaction.user.tag}:`, error);
+    }
   },
 };

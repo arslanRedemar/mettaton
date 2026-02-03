@@ -2,6 +2,7 @@ const path = require('path');
 const fs = require('fs');
 const { initializeDatabase, closeDatabase, getDatabase } = require('../../../../src/data/datasource/database');
 const { SqliteRepository } = require('../../../../src/data/repositories');
+const MeetingConfig = require('../../../../src/domain/entities/MeetingConfig');
 
 describe('SqliteRepository - Meeting Config', () => {
   let repository;
@@ -36,7 +37,7 @@ describe('SqliteRepository - Meeting Config', () => {
     });
 
     it('should return config after setting', () => {
-      repository.setMeetingConfig({
+      const meetingConfig = new MeetingConfig({
         channelId: '123456789',
         scheduleHour: 20,
         scheduleMinute: 30,
@@ -47,9 +48,12 @@ describe('SqliteRepository - Meeting Config', () => {
         enabled: true,
       });
 
+      repository.setMeetingConfig(meetingConfig);
+
       const config = repository.getMeetingConfig();
 
       expect(config).not.toBeNull();
+      expect(config).toBeInstanceOf(MeetingConfig);
       expect(config.channelId).toBe('123456789');
       expect(config.scheduleHour).toBe(20);
       expect(config.scheduleMinute).toBe(30);
@@ -63,7 +67,7 @@ describe('SqliteRepository - Meeting Config', () => {
 
   describe('setMeetingConfig', () => {
     it('should create new config', () => {
-      const result = repository.setMeetingConfig({
+      const meetingConfig = new MeetingConfig({
         channelId: '111111111',
         scheduleHour: 19,
         scheduleMinute: 0,
@@ -74,15 +78,18 @@ describe('SqliteRepository - Meeting Config', () => {
         enabled: false,
       });
 
+      const result = repository.setMeetingConfig(meetingConfig);
+
       expect(result).toBe(true);
 
       const config = repository.getMeetingConfig();
+      expect(config).toBeInstanceOf(MeetingConfig);
       expect(config.channelId).toBe('111111111');
       expect(config.enabled).toBe(false);
     });
 
     it('should update existing config', () => {
-      repository.setMeetingConfig({
+      const config1 = new MeetingConfig({
         channelId: '111111111',
         scheduleHour: 19,
         scheduleMinute: 0,
@@ -93,7 +100,9 @@ describe('SqliteRepository - Meeting Config', () => {
         enabled: false,
       });
 
-      repository.setMeetingConfig({
+      repository.setMeetingConfig(config1);
+
+      const config2 = new MeetingConfig({
         channelId: '222222222',
         scheduleHour: 21,
         scheduleMinute: 30,
@@ -104,7 +113,10 @@ describe('SqliteRepository - Meeting Config', () => {
         enabled: true,
       });
 
+      repository.setMeetingConfig(config2);
+
       const config = repository.getMeetingConfig();
+      expect(config).toBeInstanceOf(MeetingConfig);
       expect(config.channelId).toBe('222222222');
       expect(config.scheduleHour).toBe(21);
       expect(config.scheduleMinute).toBe(30);
@@ -114,7 +126,7 @@ describe('SqliteRepository - Meeting Config', () => {
     });
 
     it('should toggle enabled status', () => {
-      repository.setMeetingConfig({
+      const meetingConfig = new MeetingConfig({
         channelId: '123456789',
         scheduleHour: 20,
         scheduleMinute: 0,
@@ -125,14 +137,19 @@ describe('SqliteRepository - Meeting Config', () => {
         enabled: false,
       });
 
+      repository.setMeetingConfig(meetingConfig);
+
       let config = repository.getMeetingConfig();
+      expect(config).toBeInstanceOf(MeetingConfig);
       expect(config.enabled).toBe(false);
 
-      repository.setMeetingConfig({ ...config, enabled: true });
+      config.enable();
+      repository.setMeetingConfig(config);
       config = repository.getMeetingConfig();
       expect(config.enabled).toBe(true);
 
-      repository.setMeetingConfig({ ...config, enabled: false });
+      config.disable();
+      repository.setMeetingConfig(config);
       config = repository.getMeetingConfig();
       expect(config.enabled).toBe(false);
     });

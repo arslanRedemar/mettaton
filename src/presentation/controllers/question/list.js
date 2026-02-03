@@ -9,7 +9,12 @@ module.exports = {
 
     if (questions.length === 0) {
       console.log(`[question/list] No questions found, requested by ${interaction.user.tag}`);
-      return interaction.reply(strings.question.listEmpty);
+      try {
+        return interaction.reply({ content: strings.question.listEmpty, ephemeral: true });
+      } catch (error) {
+        console.error(`[question/list] ${error.constructor.name}: Failed to send empty list reply to ${interaction.user.tag}:`, error);
+        return;
+      }
     }
 
     const embed = new EmbedBuilder().setTitle(strings.question.listTitle).setColor(0x0099ff);
@@ -26,6 +31,11 @@ module.exports = {
     });
 
     console.log(`[question/list] Listed ${questions.length} question(s), requested by ${interaction.user.tag}`);
-    await interaction.reply({ embeds: [embed] });
+
+    try {
+      await interaction.reply({ embeds: [embed], ephemeral: true });
+    } catch (error) {
+      console.error(`[question/list] ${error.constructor.name}: Failed to send question list to ${interaction.user.tag}:`, error);
+    }
   },
 };

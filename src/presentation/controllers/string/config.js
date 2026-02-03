@@ -43,23 +43,33 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async autocomplete(interaction) {
-    const stringService = container.resolve('stringService');
-    const focused = interaction.options.getFocused();
-    const allKeys = stringService.getAllKeys();
-    const filtered = allKeys.filter((entry) => entry.key.includes(focused)).slice(0, 25);
-    await interaction.respond(
-      filtered.map((entry) => ({
-        name: `${entry.key}${entry.isOverridden ? ' (수정됨)' : ''}`,
-        value: entry.key,
-      }))
-    );
+    try {
+      const stringService = container.resolve('stringService');
+      const focused = interaction.options.getFocused();
+      const allKeys = stringService.getAllKeys();
+      const filtered = allKeys.filter((entry) => entry.key.includes(focused)).slice(0, 25);
+      await interaction.respond(
+        filtered.map((entry) => ({
+          name: `${entry.key}${entry.isOverridden ? ' (수정됨)' : ''}`,
+          value: entry.key,
+        }))
+      );
+    } catch (error) {
+      console.error(`[string/config] ${error.constructor.name}: Autocomplete failed:`, error);
+      try {
+        await interaction.respond([]);
+      } catch (respondError) {
+        console.error(`[string/config] ${respondError.constructor.name}: Failed to send empty autocomplete response:`, respondError);
+      }
+    }
   },
 
   async execute(interaction) {
-    const stringService = container.resolve('stringService');
-    const subcommand = interaction.options.getSubcommand();
+    try {
+      const stringService = container.resolve('stringService');
+      const subcommand = interaction.options.getSubcommand();
 
-    if (subcommand === '목록') {
+      if (subcommand === '목록') {
       const category = interaction.options.getString('카테고리');
       let entries = stringService.getAllKeys();
 
@@ -69,7 +79,12 @@ module.exports = {
 
       if (entries.length === 0) {
         console.log(`[string/config] No strings found for category "${category || 'all'}", requested by ${interaction.user.tag}`);
-        return interaction.reply({ content: '등록된 문자열이 없습니다.', ephemeral: true });
+        try {
+          return await interaction.reply({ content: '등록된 문자열이 없습니다.', ephemeral: true });
+        } catch (error) {
+          console.error(`[string/config] ${error.constructor.name}: Failed to send empty list response:`, error);
+          throw error;
+        }
       }
 
       const groups = {};
@@ -94,25 +109,30 @@ module.exports = {
 
       console.log(`[string/config] String list viewed (${entries.length} entries), requested by ${interaction.user.tag}`);
 
-      if (totalSize > 5000) {
-        const text = lines.join('\n');
-        const attachment = new AttachmentBuilder(Buffer.from(text, 'utf-8'), { name: 'string-list.txt' });
-        await interaction.reply({
-          content: `Total ${entries.length} strings registered. See attached file for full list.`,
-          files: [attachment],
-          ephemeral: true,
-        });
-      } else {
-        const embed = new EmbedBuilder().setTitle('봇 문자열 목록').setColor(0x5865f2);
-        for (const [cat, items] of Object.entries(groups)) {
-          const fieldLines = items.map((item) => {
-            const modified = item.isOverridden ? ' *수정됨*' : '';
-            const params = item.params ? ` (${item.params.map((p) => `{${p}}`).join(', ')})` : '';
-            return `\`${item.key}\`${modified}${params}`;
+      try {
+        if (totalSize > 5000) {
+          const text = lines.join('\n');
+          const attachment = new AttachmentBuilder(Buffer.from(text, 'utf-8'), { name: 'string-list.txt' });
+          await interaction.reply({
+            content: `Total ${entries.length} strings registered. See attached file for full list.`,
+            files: [attachment],
+            ephemeral: true,
           });
-          embed.addFields({ name: cat, value: fieldLines.join('\n') });
+        } else {
+          const embed = new EmbedBuilder().setTitle('봇 문자열 목록').setColor(0x5865f2);
+          for (const [cat, items] of Object.entries(groups)) {
+            const fieldLines = items.map((item) => {
+              const modified = item.isOverridden ? ' *수정됨*' : '';
+              const params = item.params ? ` (${item.params.map((p) => `{${p}}`).join(', ')})` : '';
+              return `\`${item.key}\`${modified}${params}`;
+            });
+            embed.addFields({ name: cat, value: fieldLines.join('\n') });
+          }
+          await interaction.reply({ embeds: [embed], ephemeral: true });
         }
-        await interaction.reply({ embeds: [embed], ephemeral: true });
+      } catch (error) {
+        console.error(`[string/config] ${error.constructor.name}: Failed to send string list:`, error);
+        throw error;
       }
     } else if (subcommand === '수정') {
       const key = interaction.options.getString('키');
@@ -121,45 +141,70 @@ module.exports = {
 
       if (!def) {
         console.log(`[string/config] Unknown key "${key}" for modify, requested by ${interaction.user.tag}`);
-        return interaction.reply({ content: `알 수 없는 문자열 키: \`${key}\``, ephemeral: true });
+        try {
+          return await interaction.reply({ content: `알 수 없는 문자열 키: \`${key}\``, ephemeral: true });
+        } catch (error) {
+          console.error(`[string/config] ${error.constructor.name}: Failed to send unknown key error:`, error);
+          throw error;
+        }
       }
 
       if (def.params) {
         const missing = def.params.filter((p) => !value.includes(`{${p}}`));
         if (missing.length > 0) {
           console.log(`[string/config] Missing template params for "${key}": ${missing.join(', ')}, by ${interaction.user.tag}`);
-          return interaction.reply({
-            content:
-              `템플릿 변수가 누락되었습니다: ${missing.map((p) => `\`{${p}}\``).join(', ')}\n` +
-              `이 문자열에는 다음 변수가 필요합니다: ${def.params.map((p) => `\`{${p}}\``).join(', ')}`,
-            ephemeral: true,
-          });
+          try {
+            return await interaction.reply({
+              content:
+                `템플릿 변수가 누락되었습니다: ${missing.map((p) => `\`{${p}}\``).join(', ')}\n` +
+                `이 문자열에는 다음 변수가 필요합니다: ${def.params.map((p) => `\`{${p}}\``).join(', ')}`,
+              ephemeral: true,
+            });
+          } catch (error) {
+            console.error(`[string/config] ${error.constructor.name}: Failed to send missing params error:`, error);
+            throw error;
+          }
         }
       }
 
       stringService.setString(key, value);
 
       console.log(`[string/config] String "${key}" modified by ${interaction.user.tag}`);
-      await interaction.reply({
-        content: `문자열이 수정되었습니다.\n\n키: \`${key}\`\n이전: ${def.value}\n변경: ${value}`,
-        ephemeral: true,
-      });
+      try {
+        await interaction.reply({
+          content: `문자열이 수정되었습니다.\n\n키: \`${key}\`\n이전: ${def.value}\n변경: ${value}`,
+          ephemeral: true,
+        });
+      } catch (error) {
+        console.error(`[string/config] ${error.constructor.name}: Failed to send modify success message:`, error);
+        throw error;
+      }
     } else if (subcommand === '초기화') {
       const key = interaction.options.getString('키');
       const def = stringService.getDefault(key);
 
       if (!def) {
         console.log(`[string/config] Unknown key "${key}" for reset, requested by ${interaction.user.tag}`);
-        return interaction.reply({ content: `알 수 없는 문자열 키: \`${key}\``, ephemeral: true });
+        try {
+          return await interaction.reply({ content: `알 수 없는 문자열 키: \`${key}\``, ephemeral: true });
+        } catch (error) {
+          console.error(`[string/config] ${error.constructor.name}: Failed to send unknown key error:`, error);
+          throw error;
+        }
       }
 
       stringService.resetString(key);
 
       console.log(`[string/config] String "${key}" reset to default by ${interaction.user.tag}`);
-      await interaction.reply({
-        content: `\`${key}\` 문자열이 기본값으로 초기화되었습니다.\n기본값: ${def.value}`,
-        ephemeral: true,
-      });
+      try {
+        await interaction.reply({
+          content: `\`${key}\` 문자열이 기본값으로 초기화되었습니다.\n기본값: ${def.value}`,
+          ephemeral: true,
+        });
+      } catch (error) {
+        console.error(`[string/config] ${error.constructor.name}: Failed to send reset success message:`, error);
+        throw error;
+      }
     } else if (subcommand === '확인') {
       const key = interaction.options.getString('키');
       const allKeys = stringService.getAllKeys();
@@ -167,7 +212,12 @@ module.exports = {
 
       if (!entry) {
         console.log(`[string/config] Unknown key "${key}" for view, requested by ${interaction.user.tag}`);
-        return interaction.reply({ content: `알 수 없는 문자열 키: \`${key}\``, ephemeral: true });
+        try {
+          return await interaction.reply({ content: `알 수 없는 문자열 키: \`${key}\``, ephemeral: true });
+        } catch (error) {
+          console.error(`[string/config] ${error.constructor.name}: Failed to send unknown key error:`, error);
+          throw error;
+        }
       }
 
       const embed = new EmbedBuilder()
@@ -185,7 +235,24 @@ module.exports = {
         );
 
       console.log(`[string/config] String "${key}" viewed by ${interaction.user.tag}`);
-      await interaction.reply({ embeds: [embed], ephemeral: true });
+      try {
+        await interaction.reply({ embeds: [embed], ephemeral: true });
+      } catch (error) {
+        console.error(`[string/config] ${error.constructor.name}: Failed to send view embed:`, error);
+        throw error;
+      }
+    }
+    } catch (error) {
+      console.error(`[string/config] ${error.constructor.name}: Unexpected error in execute:`, error);
+      try {
+        if (interaction.replied || interaction.deferred) {
+          await interaction.followUp({ content: '❌ 명령어 실행 중 오류가 발생했습니다.', ephemeral: true });
+        } else {
+          await interaction.reply({ content: '❌ 명령어 실행 중 오류가 발생했습니다.', ephemeral: true });
+        }
+      } catch (replyError) {
+        console.error(`[string/config] ${replyError.constructor.name}: Failed to send error message:`, replyError);
+      }
     }
   },
 };

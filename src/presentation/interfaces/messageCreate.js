@@ -4,15 +4,15 @@ const strings = require('./strings');
 
 module.exports = {
   name: 'messageCreate',
-  async execute(message, { moonCalendarService, repository, pointAccumulationService }) {
+  async execute(message, { moonCalendarService, repository, pointAccumulationService, inactiveMemberService }) {
     if (message.author.bot) return;
 
     // Member activity tracking
-    if (repository && message.guild) {
+    if (inactiveMemberService && message.guild) {
       try {
-        repository.updateMemberActivity(message.author.id);
+        inactiveMemberService.recordActivity(message.author.id);
       } catch (error) {
-        console.error(`[messageCreate] Activity tracking failed for ${message.author.tag} (${message.author.id}):`, error);
+        console.error(`[messageCreate] ${error.constructor.name}: Activity tracking failed for ${message.author.tag} (${message.author.id}):`, error);
       }
     }
 
@@ -39,9 +39,18 @@ module.exports = {
       }
     }
 
+    // Moon calendar command handler
     if (message.content === strings.messageCreate.moonCommand) {
-      console.log(`[messageCreate] Moon calendar requested by ${message.author.tag} (${message.author.id})`);
-      const msg = await message.channel.send(strings.messageCreate.moonLoading);
+      console.log(`[moon-calendar/request] Moon calendar requested by ${message.author.tag} (${message.author.id})`);
+
+      let msg;
+      try {
+        msg = await message.channel.send(strings.messageCreate.moonLoading);
+      } catch (sendError) {
+        console.error(`[moon-calendar/request] ${sendError.constructor.name}: Failed to send loading message:`, sendError);
+        return;
+      }
+
       try {
         const imageBuffer = await moonCalendarService.getCalendarImage();
 
@@ -57,10 +66,14 @@ module.exports = {
           embeds: [embed],
           files: [{ attachment: imageBuffer, name: 'moon_calendar.png' }],
         });
-        console.log(`[messageCreate] Moon calendar sent successfully for ${message.author.tag}`);
+        console.log(`[moon-calendar/request] Calendar sent successfully to ${message.author.tag} (${message.author.id})`);
       } catch (err) {
-        console.error(`[messageCreate] Moon calendar failed for ${message.author.tag}:`, err);
-        await msg.edit(strings.messageCreate.moonError);
+        console.error(`[moon-calendar/request] ${err.constructor.name}: Failed to fetch/send calendar for ${message.author.tag}:`, err);
+        try {
+          await msg.edit(strings.messageCreate.moonError);
+        } catch (editError) {
+          console.error(`[moon-calendar/request] ${editError.constructor.name}: Failed to edit error message:`, editError);
+        }
       }
     }
   },

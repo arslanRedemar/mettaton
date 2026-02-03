@@ -29,6 +29,7 @@ const quizBulkRegister = require('./quiz/bulkRegister');
 const quizList = require('./quiz/list');
 const quizStats = require('./quiz/stats');
 const quizStatus = require('./quiz/status');
+const quizEdit = require('./quiz/edit');
 const quizConfig = require('./quiz/config');
 const quizDelete = require('./quiz/delete');
 const quizReset = require('./quiz/reset');
@@ -60,6 +61,7 @@ const commands = [
   quizList,
   quizStats,
   quizStatus,
+  quizEdit,
   quizConfig,
   quizDelete,
   quizReset,

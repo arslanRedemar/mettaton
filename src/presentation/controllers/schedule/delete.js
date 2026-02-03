@@ -2,33 +2,58 @@ const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const config = require('../../../../core/config');
 const strings = require('../../interfaces/strings');
 
+/**
+ * Schedule Delete Command
+ * Admin-only command to delete a schedule by ID
+ * Removes the schedule from database and deletes the Discord message
+ */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('일정삭제')
     .setDescription('일정을 삭제합니다')
-    .addIntegerOption((option) => option.setName('id').setDescription('삭제할 강의 ID').setRequired(true))
+    .addIntegerOption((option) => option.setName('id').setDescription('삭제할 일정 ID').setRequired(true))
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
+  /**
+   * Execute schedule deletion
+   * @param {CommandInteraction} interaction - Discord interaction
+   * @param {SqliteRepository} repository - Repository instance
+   */
   async execute(interaction, repository) {
-    const lectureId = interaction.options.getInteger('id');
-    const lecture = repository.deleteLecture(lectureId);
+    const scheduleId = interaction.options.getInteger('id');
+    const schedule = repository.deleteSchedule(scheduleId);
 
-    if (!lecture) {
-      console.log(`[schedule/delete] Schedule #${lectureId} not found, requested by ${interaction.user.tag}`);
-      return interaction.reply({ content: strings.schedule.deleteNotFound(lectureId), ephemeral: true });
-    }
-
-    const channel = interaction.guild.channels.cache.get(config.channels.schedule);
-    if (channel && lecture.messageId) {
+    if (!schedule) {
+      console.log(`[schedule/delete] Schedule #${scheduleId} not found, requested by ${interaction.user.tag} (${interaction.user.id})`);
       try {
-        const msg = await channel.messages.fetch(lecture.messageId);
-        if (msg) await msg.delete();
-      } catch (err) {
-        console.error(`[schedule/delete] Failed to delete Discord message for schedule #${lectureId}:`, err);
+        return interaction.reply({ content: strings.schedule.deleteNotFound(scheduleId), ephemeral: true });
+      } catch (error) {
+        console.error(`[schedule/delete] ${error.constructor.name}: Failed to send not found reply:`, error);
+        return;
       }
     }
 
-    console.log(`[schedule/delete] Schedule #${lectureId} "${lecture.title}" deleted by ${interaction.user.tag}`);
-    await interaction.reply({ content: strings.schedule.deleteSuccess(lecture.title), ephemeral: true });
+    const channel = interaction.guild.channels.cache.get(config.channels.schedule);
+    if (channel && schedule.messageId) {
+      try {
+        const msg = await channel.messages.fetch(schedule.messageId);
+        if (msg) {
+          await msg.delete();
+          console.log(`[schedule/delete] Discord message ${schedule.messageId} deleted for schedule #${scheduleId}`);
+        }
+      } catch (error) {
+        console.error(`[schedule/delete] ${error.constructor.name}: Failed to delete Discord message ${schedule.messageId} for schedule #${scheduleId}:`, error);
+      }
+    } else if (!channel) {
+      console.error(`[schedule/delete] ChannelNotFoundError: Schedule channel not found (ID: ${config.channels.schedule})`);
+    }
+
+    console.log(`[schedule/delete] Schedule #${scheduleId} "${schedule.title}" deleted by ${interaction.user.tag} (${interaction.user.id})`);
+
+    try {
+      await interaction.reply({ content: strings.schedule.deleteSuccess(schedule.title), ephemeral: true });
+    } catch (error) {
+      console.error(`[schedule/delete] ${error.constructor.name}: Failed to send success reply:`, error);
+    }
   },
 };

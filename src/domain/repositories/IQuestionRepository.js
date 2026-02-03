@@ -1,57 +1,57 @@
 /**
  * Question Repository Interface
- * 질문 레포지토리 인터페이스 (추상화)
- * Data 레이어에서 구현
+ * Abstract repository for question management
+ * Implementation should be provided in the Data layer
  */
 class IQuestionRepository {
   /**
-   * 모든 질문 조회
-   * @returns {Question[]}
+   * Get all questions
+   * @returns {Question[]} Array of all questions
    */
   getAllQuestions() {
     throw new Error('Method not implemented');
   }
 
   /**
-   * ID로 질문 조회
-   * @param {number} id
-   * @returns {Question|null}
+   * Get a question by ID
+   * @param {number} id - Question ID
+   * @returns {Question|null} Question entity or null if not found
    */
   getQuestionById(id) {
     throw new Error('Method not implemented');
   }
 
   /**
-   * 질문 추가
-   * @param {Question} question
-   * @returns {Question}
+   * Add a new question
+   * @param {Question} question - Question entity to add
+   * @returns {Question} Added question with generated ID
    */
   addQuestion(question) {
     throw new Error('Method not implemented');
   }
 
   /**
-   * 질문 수정
-   * @param {Question} question
-   * @returns {boolean}
+   * Update an existing question
+   * @param {Question} question - Question entity to update
+   * @returns {boolean} True if updated successfully
    */
   updateQuestion(question) {
     throw new Error('Method not implemented');
   }
 
   /**
-   * 질문 삭제
-   * @param {number} id
-   * @returns {Question|null}
+   * Delete a question by ID
+   * @param {number} id - Question ID
+   * @returns {Question|null} Deleted question entity or null if not found
    */
   deleteQuestion(id) {
     throw new Error('Method not implemented');
   }
 
   /**
-   * 메시지 ID로 질문 삭제
-   * @param {string} messageId
-   * @returns {boolean}
+   * Delete a question by Discord message ID
+   * @param {string} messageId - Discord message ID
+   * @returns {boolean} True if deleted successfully
    */
   deleteQuestionByMessageId(messageId) {
     throw new Error('Method not implemented');

@@ -1,13 +1,17 @@
 module.exports = {
   LectureMapper: require('./LectureMapper'),
+  ScheduleMapper: require('./ScheduleMapper'),
   QuestionMapper: require('./QuestionMapper'),
   ActivityPointMapper: require('./ActivityPointMapper'),
   PersonalPracticeMapper: require('./PersonalPracticeMapper'),
   ActivityTypeConfigMapper: require('./ActivityTypeConfigMapper'),
   PointAccumulationLogMapper: require('./PointAccumulationLogMapper'),
+  MeetingConfigMapper: require('./MeetingConfigMapper'),
   QuizQuestionMapper: require('./QuizQuestionMapper'),
   QuizConfigMapper: require('./QuizConfigMapper'),
   QuizCategoryMapper: require('./QuizCategoryMapper'),
   QuizPublishHistoryMapper: require('./QuizPublishHistoryMapper'),
   QuizAnswerMapper: require('./QuizAnswerMapper'),
+  MemberActivityMapper: require('./MemberActivityMapper'),
+  BotStringMapper: require('./BotStringMapper'),
 };

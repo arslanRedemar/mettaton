@@ -75,6 +75,8 @@ module.exports = {
               { name: '수행모임 참여', value: 'MEETING_ATTEND' },
               { name: '개인수행', value: 'PERSONAL_PRACTICE' },
               { name: '일반활동', value: 'GENERAL' },
+              { name: '퀴즈 참가', value: 'QUIZ_PARTICIPATE' },
+              { name: '퀴즈 정답', value: 'QUIZ_CORRECT' },
             )
         )
         .addIntegerOption((option) =>
@@ -150,6 +152,8 @@ module.exports = {
         MEETING_ATTEND: '수행모임 참여',
         PERSONAL_PRACTICE: '개인수행',
         GENERAL: '일반활동',
+        QUIZ_PARTICIPATE: '퀴즈 참가',
+        QUIZ_CORRECT: '퀴즈 정답',
       };
 
       const label = ACTIVITY_TYPE_LABELS[type] || type;
@@ -169,6 +173,8 @@ module.exports = {
         MEETING_ATTEND: '수행모임 참여',
         PERSONAL_PRACTICE: '개인수행',
         GENERAL: '일반활동',
+        QUIZ_PARTICIPATE: '퀴즈 참가',
+        QUIZ_CORRECT: '퀴즈 정답',
       };
 
       const lines = configs.map((c) => {
