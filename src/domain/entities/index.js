@@ -1,13 +1,18 @@
 module.exports = {
   Lecture: require('./Lecture'),
+  Schedule: require('./Schedule'),
   Question: require('./Question'),
   PersonalPractice: require('./PersonalPractice'),
   ActivityPoint: require('./ActivityPoint'),
   ActivityTypeConfig: require('./ActivityTypeConfig'),
   PointAccumulationLog: require('./PointAccumulationLog'),
+  MeetingConfig: require('./MeetingConfig'),
   QuizQuestion: require('./QuizQuestion'),
   QuizConfig: require('./QuizConfig'),
   QuizCategory: require('./QuizCategory'),
   QuizPublishHistory: require('./QuizPublishHistory'),
   QuizAnswer: require('./QuizAnswer'),
+  DatabaseSyncResult: require('./DatabaseSyncResult'),
+  BotString: require('./BotString'),
+  MemberActivity: require('./MemberActivity'),
 };

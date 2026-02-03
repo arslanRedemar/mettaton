@@ -8,7 +8,7 @@ npm-debug.log
 dockerfile
 .dockerignore
 docker-compose.yml
-scripts/
+Scripts/
 moon_calendars/
 data/
 *.db

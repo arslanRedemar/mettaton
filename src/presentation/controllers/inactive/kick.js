@@ -14,112 +14,116 @@ module.exports = {
     .setDescription('비활동 회원을 추방합니다')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
-  async execute(interaction, repository) {
-    const days = repository.getInactiveDays();
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - days);
-
-    const guild = interaction.guild;
-    await guild.members.fetch();
-
-    const activities = repository.getAllMemberActivities();
-    const activityMap = new Map();
-    for (const row of activities) {
-      activityMap.set(row.user_id, new Date(row.last_active_at));
-    }
-
-    const botMember = guild.members.me;
-    const inactiveMembers = [];
-    for (const [, member] of guild.members.cache) {
-      if (member.user.bot) continue;
-      if (member.id === guild.ownerId) continue;
-      if (botMember && member.roles.highest.position >= botMember.roles.highest.position) continue;
-
-      const lastActive = activityMap.get(member.id);
-      if (!lastActive || lastActive < cutoffDate) {
-        inactiveMembers.push(member);
-      }
-    }
-
-    if (inactiveMembers.length === 0) {
-      console.log(`[inactive/kick] No kickable inactive members found, requested by ${interaction.user.tag}`);
-      return interaction.reply({ content: strings.inactive.kickNoTarget, ephemeral: true });
-    }
-
-    const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId('inactive_kick_confirm')
-        .setLabel('확인')
-        .setStyle(ButtonStyle.Danger),
-      new ButtonBuilder()
-        .setCustomId('inactive_kick_cancel')
-        .setLabel('취소')
-        .setStyle(ButtonStyle.Secondary),
-    );
-
-    const response = await interaction.reply({
-      content: strings.inactive.kickConfirm(inactiveMembers.length),
-      components: [row],
-      ephemeral: true,
-    });
-
+  async execute(interaction, inactiveMemberService) {
     try {
-      const confirmation = await response.awaitMessageComponent({
-        filter: (i) => i.user.id === interaction.user.id,
-        componentType: ComponentType.Button,
-        time: 30_000,
-      });
+      const guild = interaction.guild;
+      await guild.members.fetch();
 
-      if (confirmation.customId === 'inactive_kick_cancel') {
-        console.log(`[inactive/kick] Kick cancelled by ${interaction.user.tag}`);
-        return confirmation.update({
-          content: strings.inactive.kickCancelled,
-          components: [],
-        });
+      const kickableList = inactiveMemberService.getKickableInactiveMembers(guild);
+
+      if (kickableList.length === 0) {
+        console.log(`[inactive/kick] No kickable inactive members found, requested by ${interaction.user.tag}`);
+        return interaction.reply({ content: strings.inactive.kickNoTarget, ephemeral: true });
       }
 
-      await confirmation.update({
-        content: strings.inactive.kickProgress(0, inactiveMembers.length),
-        components: [],
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('inactive_kick_confirm')
+          .setLabel('확인')
+          .setStyle(ButtonStyle.Danger),
+        new ButtonBuilder()
+          .setCustomId('inactive_kick_cancel')
+          .setLabel('취소')
+          .setStyle(ButtonStyle.Secondary),
+      );
+
+      const response = await interaction.reply({
+        content: strings.inactive.kickConfirm(kickableList.length),
+        components: [row],
+        ephemeral: true,
       });
 
-      let success = 0;
-      let fail = 0;
+      try {
+        const confirmation = await response.awaitMessageComponent({
+          filter: (i) => i.user.id === interaction.user.id,
+          componentType: ComponentType.Button,
+          time: 30_000,
+        });
 
-      for (let i = 0; i < inactiveMembers.length; i++) {
-        try {
-          await inactiveMembers[i].kick(`비활동 ${days}일 이상`);
-          console.log(`[inactive/kick] Kicked ${inactiveMembers[i].user.tag} (${inactiveMembers[i].id})`);
-          success++;
-        } catch (error) {
-          console.error(`[inactive/kick] Failed to kick ${inactiveMembers[i].user.tag} (${inactiveMembers[i].id}):`, error);
-          fail++;
-        }
-
-        if ((i + 1) % 5 === 0) {
-          await interaction.editReply({
-            content: strings.inactive.kickProgress(i + 1, inactiveMembers.length),
+        if (confirmation.customId === 'inactive_kick_cancel') {
+          console.log(`[inactive/kick] Kick cancelled by ${interaction.user.tag}`);
+          return confirmation.update({
+            content: strings.inactive.kickCancelled,
+            components: [],
           });
         }
-      }
 
-      if (fail === 0) {
-        console.log(`[inactive/kick] All ${success} member(s) kicked successfully by ${interaction.user.tag}`);
-        await interaction.editReply({
-          content: strings.inactive.kickSuccess(success),
+        await confirmation.update({
+          content: strings.inactive.kickProgress(0, kickableList.length),
+          components: [],
         });
-      } else {
-        console.log(`[inactive/kick] Kick completed: ${success} success, ${fail} failed, by ${interaction.user.tag}`);
-        await interaction.editReply({
-          content: strings.inactive.kickPartialFail(success, fail),
-        });
+
+        const kickReason = inactiveMemberService.getKickReason();
+        let success = 0;
+        let fail = 0;
+
+        for (let i = 0; i < kickableList.length; i++) {
+          const { member } = kickableList[i];
+          try {
+            await member.kick(kickReason);
+            console.log(`[inactive/kick] Kicked ${member.user.tag} (${member.id})`);
+            success++;
+          } catch (error) {
+            console.error(`[inactive/kick] ${error.constructor.name}: Failed to kick ${member.user.tag} (${member.id}):`, error);
+            fail++;
+          }
+
+          // Update progress every 5 kicks
+          if ((i + 1) % 5 === 0) {
+            try {
+              await interaction.editReply({
+                content: strings.inactive.kickProgress(i + 1, kickableList.length),
+              });
+            } catch (error) {
+              console.error(`[inactive/kick] ${error.constructor.name}: Failed to update progress message:`, error);
+            }
+          }
+        }
+
+        try {
+          if (fail === 0) {
+            console.log(`[inactive/kick] All ${success} member(s) kicked successfully by ${interaction.user.tag}`);
+            await interaction.editReply({
+              content: strings.inactive.kickSuccess(success),
+            });
+          } else {
+            console.log(`[inactive/kick] Kick completed: ${success} success, ${fail} failed, by ${interaction.user.tag}`);
+            await interaction.editReply({
+              content: strings.inactive.kickPartialFail(success, fail),
+            });
+          }
+        } catch (error) {
+          console.error(`[inactive/kick] ${error.constructor.name}: Failed to send final result message:`, error);
+        }
+      } catch (error) {
+        if (error.message?.includes('time')) {
+          console.log(`[inactive/kick] Kick confirmation timed out for ${interaction.user.tag}`);
+          try {
+            await interaction.editReply({
+              content: strings.inactive.kickTimeout,
+              components: [],
+            });
+          } catch (editError) {
+            console.error(`[inactive/kick] ${editError.constructor.name}: Failed to send timeout message:`, editError);
+          }
+        } else {
+          console.error(`[inactive/kick] ${error.constructor.name}: Button interaction failed:`, error);
+          throw error;
+        }
       }
-    } catch {
-      console.log(`[inactive/kick] Kick confirmation timed out for ${interaction.user.tag}`);
-      await interaction.editReply({
-        content: strings.inactive.kickTimeout,
-        components: [],
-      });
+    } catch (error) {
+      console.error(`[inactive/kick] ${error.constructor.name}: Failed to execute kick command for ${interaction.user.tag}:`, error);
+      throw error;
     }
   },
 };

@@ -1,0 +1,10 @@
+# Shell scripts must use LF (Linux execution)
+*.sh text eol=lf
+
+# Systemd unit files must use LF
+*.service text eol=lf
+*.timer text eol=lf
+
+# Docker files
+Dockerfile text eol=lf
+entrypoint.sh text eol=lf

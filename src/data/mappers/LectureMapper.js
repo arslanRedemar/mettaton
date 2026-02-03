@@ -1,11 +1,16 @@
 const Lecture = require('../../domain/entities/Lecture');
 
 /**
- * Lecture Entity ↔ DB Model 변환
+ * Lecture Entity ↔ DB Model Mapper (Legacy name for Schedule)
+ * Transforms between Lecture domain entity and database row representation
+ * Note: This is the original mapper name. Use ScheduleMapper for new code.
  */
 class LectureMapper {
   /**
-   * DB row → Lecture Entity
+   * Convert database row to Lecture entity
+   * @param {Object} row - Database row from lectures table
+   * @param {string[]} [attendees=[]] - Array of attendee user IDs
+   * @returns {Lecture|null} Lecture entity or null if row is null
    */
   static toEntity(row, attendees = []) {
     if (!row) return null;
@@ -23,7 +28,9 @@ class LectureMapper {
   }
 
   /**
-   * Lecture Entity → DB params
+   * Convert Lecture entity to database parameters
+   * @param {Lecture} lecture - Lecture entity
+   * @returns {Object} Database parameters for prepared statements
    */
   static toDbParams(lecture) {
     return {

@@ -15,10 +15,15 @@ module.exports = {
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
-  async execute(interaction, repository) {
-    const days = interaction.options.getInteger('일수');
-    repository.setInactiveDays(days);
-    console.log(`[inactive/config] Inactive threshold set to ${days} days by ${interaction.user.tag}`);
-    await interaction.reply({ content: strings.inactive.configSaved(days), ephemeral: true });
+  async execute(interaction, inactiveMemberService) {
+    try {
+      const days = interaction.options.getInteger('일수');
+      inactiveMemberService.setInactiveDays(days);
+      console.log(`[inactive/config] Inactive threshold set to ${days} days by ${interaction.user.tag}`);
+      await interaction.reply({ content: strings.inactive.configSaved(days), ephemeral: true });
+    } catch (error) {
+      console.error(`[inactive/config] ${error.constructor.name}: Failed to set inactive threshold for ${interaction.user.tag}:`, error);
+      throw error;
+    }
   },
 };

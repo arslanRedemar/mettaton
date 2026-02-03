@@ -1,11 +1,15 @@
 const Question = require('../../domain/entities/Question');
 
 /**
- * Question Entity ↔ DB Model 변환
+ * Question Entity ↔ DB Model Mapper
+ * Handles conversion between Question domain entity and database models
  */
 class QuestionMapper {
   /**
-   * DB row → Question Entity
+   * Convert database row to Question entity
+   * @param {Object} row - Database row object
+   * @param {string[]} [attendees=[]] - Array of attendee user IDs
+   * @returns {Question|null} Question entity or null if row is empty
    */
   static toEntity(row, attendees = []) {
     if (!row) return null;
@@ -21,7 +25,9 @@ class QuestionMapper {
   }
 
   /**
-   * Question Entity → DB params
+   * Convert Question entity to database parameters
+   * @param {Question} question - Question entity
+   * @returns {Object} Database parameter object
    */
   static toDbParams(question) {
     return {

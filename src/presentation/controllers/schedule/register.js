@@ -1,8 +1,13 @@
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
-const Lecture = require('../../../domain/entities/Lecture');
+const Schedule = require('../../../domain/entities/Schedule');
 const config = require('../../../../core/config');
 const strings = require('../../interfaces/strings');
 
+/**
+ * Schedule Registration Command
+ * Admin-only command to register a new schedule
+ * Creates an embed message in the schedule channel with attendance reactions
+ */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('일정등록')
@@ -15,6 +20,11 @@ module.exports = {
     .addStringOption((opt) => opt.setName('주최자').setDescription('주최자').setRequired(true))
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
+  /**
+   * Execute schedule registration
+   * @param {CommandInteraction} interaction - Discord interaction
+   * @param {SqliteRepository} repository - Repository instance
+   */
   async execute(interaction, repository) {
     const title = interaction.options.getString('제목');
     const date = interaction.options.getString('날짜');
@@ -43,30 +53,39 @@ module.exports = {
       });
     }
 
-    const lecture = new Lecture({ title, date, start, end, location, teacher });
-    repository.addLecture(lecture);
+    const schedule = new Schedule({ title, date, start, end, location, teacher });
+    repository.addSchedule(schedule);
 
     const channel = interaction.guild.channels.cache.get(config.channels.schedule);
     if (channel) {
-      const msg = await channel.send({
-        embeds: [
-          new EmbedBuilder()
-            .setTitle(strings.schedule.embedTitle(lecture.id, lecture.title))
-            .setDescription(
-              strings.schedule.embedDescription(lecture.location, lecture.date, lecture.start, lecture.end, lecture.teacher, '0명')
-            )
-            .setColor(0x00cc66),
-        ],
-      });
-      await msg.react('✅');
-      await msg.react('❌');
-      lecture.messageId = msg.id;
-      repository.updateLecture(lecture);
+      try {
+        const msg = await channel.send({
+          embeds: [
+            new EmbedBuilder()
+              .setTitle(strings.schedule.embedTitle(schedule.id, schedule.title))
+              .setDescription(
+                strings.schedule.embedDescription(schedule.location, schedule.date, schedule.start, schedule.end, schedule.teacher, '0명')
+              )
+              .setColor(0x00cc66),
+          ],
+        });
+        await msg.react('✅');
+        await msg.react('❌');
+        schedule.messageId = msg.id;
+        repository.updateSchedule(schedule);
+      } catch (error) {
+        console.error(`[schedule/register] ${error.constructor.name}: Failed to post schedule embed for #${schedule.id}:`, error);
+      }
     } else {
-      console.error(`[schedule/register] Schedule channel not found (ID: ${config.channels.schedule})`);
+      console.error(`[schedule/register] ChannelNotFoundError: Schedule channel not found (ID: ${config.channels.schedule})`);
     }
 
-    console.log(`[schedule/register] Schedule #${lecture.id} "${title}" registered by ${interaction.user.tag}`);
-    await interaction.reply({ content: strings.schedule.registerSuccess, ephemeral: true });
+    console.log(`[schedule/register] Schedule #${schedule.id} "${title}" registered by ${interaction.user.tag} (${interaction.user.id})`);
+
+    try {
+      await interaction.reply({ content: strings.schedule.registerSuccess, ephemeral: true });
+    } catch (error) {
+      console.error(`[schedule/register] ${error.constructor.name}: Failed to send reply to ${interaction.user.tag}:`, error);
+    }
   },
 };

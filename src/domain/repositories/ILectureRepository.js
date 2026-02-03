@@ -1,57 +1,59 @@
 /**
- * Lecture Repository Interface
- * 강의 레포지토리 인터페이스 (추상화)
- * Data 레이어에서 구현
+ * Lecture Repository Interface (Legacy name for Schedule)
+ * Repository interface for lecture/schedule management
+ * Implemented in Data layer
+ * Note: This is the original interface name. Use IScheduleRepository for new code.
  */
 class ILectureRepository {
   /**
-   * 모든 강의 조회
-   * @returns {Lecture[]}
+   * Get all lectures
+   * @returns {Lecture[]} Array of all lectures
    */
   getAllLectures() {
     throw new Error('Method not implemented');
   }
 
   /**
-   * ID로 강의 조회
-   * @param {number} id
-   * @returns {Lecture|null}
+   * Get lecture by ID
+   * @param {number} id - Lecture ID
+   * @returns {Lecture|null} Lecture entity or null if not found
    */
   getLectureById(id) {
     throw new Error('Method not implemented');
   }
 
   /**
-   * 강의 추가
-   * @param {Lecture} lecture
-   * @returns {Lecture}
+   * Add a new lecture
+   * @param {Lecture} lecture - Lecture entity to add
+   * @returns {Lecture} Created lecture with assigned ID
    */
   addLecture(lecture) {
     throw new Error('Method not implemented');
   }
 
   /**
-   * 강의 수정
-   * @param {Lecture} lecture
-   * @returns {boolean}
+   * Update an existing lecture
+   * @param {Lecture} lecture - Lecture entity with updated data
+   * @returns {boolean} True if update was successful
    */
   updateLecture(lecture) {
     throw new Error('Method not implemented');
   }
 
   /**
-   * 강의 삭제
-   * @param {number} id
-   * @returns {Lecture|null}
+   * Delete lecture by ID
+   * @param {number} id - Lecture ID
+   * @returns {Lecture|null} Deleted lecture entity or null if not found
    */
   deleteLecture(id) {
     throw new Error('Method not implemented');
   }
 
   /**
-   * 메시지 ID로 강의 삭제
-   * @param {string} messageId
-   * @returns {boolean}
+   * Delete lecture by Discord message ID
+   * Used for automatic cleanup when message is deleted
+   * @param {string} messageId - Discord message ID
+   * @returns {boolean} True if deletion was successful
    */
   deleteLectureByMessageId(messageId) {
     throw new Error('Method not implemented');
