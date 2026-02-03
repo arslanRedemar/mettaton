@@ -82,7 +82,7 @@ class PointHistoryPieChartRenderer {
       console.log(`[point/history] Launching Puppeteer for user "${userName}"`);
       browser = await puppeteer.launch({
         headless: true,
-        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
+        executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium-browser',
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',

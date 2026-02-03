@@ -3,7 +3,7 @@ Description=Mettaton Discord Bot Auto-Update Timer
 
 [Timer]
 OnBootSec=2min
-OnUnitActiveSec=5min
+OnUnitActiveSec=30min
 RandomizedDelaySec=30s
 Persistent=true
 
